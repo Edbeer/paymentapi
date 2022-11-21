@@ -7,6 +7,17 @@ import (
 	"github.com/google/uuid"
 )
 
+type RequestUpdate struct {
+	FirstName  string    `json:"first_name"`
+	LastName   string    `json:"last_name"`
+	CardNumber uint64    `json:"card_number"`
+}
+
+type RequestCreate struct {
+	FirstName  string    `json:"first_name"`
+	LastName   string    `json:"last_name"`
+}
+
 type Account struct {
 	ID         uuid.UUID `json:"id"`
 	FirstName  string    `json:"first_name"`

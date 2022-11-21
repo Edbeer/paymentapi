@@ -1,6 +1,11 @@
 package main
 
-import "log"
+import (
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+)
 
 func main() {
 	db, err := NewPostgresStorage()
@@ -11,5 +16,15 @@ func main() {
 		log.Fatal(err)
 	}
 	s := NewJSONApiServer(":8080", db)
-	s.Run()
+	go func() {
+		s.Run()
+	}()
+
+	quitCh := make(chan os.Signal, 1)
+	signal.Notify(quitCh, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+
+	select {
+	case signal := <- quitCh:
+		log.Println(signal)
+	}
 }
