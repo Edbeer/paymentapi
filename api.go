@@ -9,11 +9,13 @@ import (
 
 type JSONApiServer struct {
 	listenAddr string
+	storage Storage
 }
 
-func NewJSONApiServer(listenAddr string) *JSONApiServer {
+func NewJSONApiServer(listenAddr string, storage Storage) *JSONApiServer {
 	return &JSONApiServer{
 		listenAddr: listenAddr,
+		storage: storage,
 	}
 }
 
