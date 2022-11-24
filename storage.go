@@ -11,8 +11,9 @@ type Storage interface {
 	CreateAccount(account *Account) (*Account, error)
 	GetAccount() ([]*Account, error)
 	GetAccountByID(id uuid.UUID) (*Account, error)
-	UpdateAccount(firstName string, lastName string, cardNumber uint64, id uuid.UUID) (*Account, error)
+	UpdateAccount(firstName string, lastName string, cardNumber, balance uint64, id uuid.UUID) (*Account, error)
 	DeleteAccount(id uuid.UUID) error
+	DepositAccount(id uuid.UUID, amount uint64) (*Account, error)
 }
 
 type PostgresStorage struct {
@@ -129,12 +130,13 @@ func (s *PostgresStorage) GetAccountByID(id uuid.UUID) (*Account, error) {
 	return acc, nil
 }
 
-func (s *PostgresStorage) UpdateAccount(firstName string, lastName string, cardNumber uint64, id uuid.UUID) (*Account, error) {
+func (s *PostgresStorage) UpdateAccount(firstName string, lastName string, cardNumber, balance uint64, id uuid.UUID) (*Account, error) {
 	query := `UPDATE account
 				SET first_name = COALESCE(NULLIF($1, ''), first_name),
 					last_name = COALESCE(NULLIF($2, ''), last_name),
-					card_number = COALESCE(NULLIF($3, 0), card_number)
-				WHERE id = $4
+					card_number = COALESCE(NULLIF($3, 0), card_number),
+					balance = COALESCE(NULLIF($4, 0), balance)
+				WHERE id = $5
 				RETURNING *`
 	acc := &Account{}
 	if err := s.db.QueryRow(
@@ -142,6 +144,7 @@ func (s *PostgresStorage) UpdateAccount(firstName string, lastName string, cardN
 		firstName,
 		lastName,
 		cardNumber,
+		balance,
 		id,
 	).Scan(&acc.ID, &acc.FirstName, &acc.LastName, &acc.CardNumber, &acc.Balance, &acc.CreatedAt); err != nil {
 		return nil, err
@@ -153,6 +156,30 @@ func (s *PostgresStorage) DeleteAccount(id uuid.UUID) error {
 	query := `DELETE FROM account WHERE id = $1`
 	_, err := s.db.Exec(query, id)
 	return err
+}
+
+func (s *PostgresStorage) DepositAccount(id uuid.UUID, amount uint64) (*Account, error) {
+	query := `UPDATE account
+				SET balance = COALESCE(NULLIF($1, 0), balance)
+				WHERE id = $2
+				RETURNING *`
+	acc := &Account{}
+	tx, err := s.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	if err := tx.QueryRow(
+		query,
+		amount,
+		id,
+	).Scan(&acc.ID, &acc.FirstName, &acc.LastName, &acc.CardNumber, &acc.Balance, &acc.CreatedAt); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return acc, nil
 }
 
 func (s *PostgresStorage) CreatePayment() (*Payment, error) {

@@ -28,6 +28,7 @@ func (s *JSONApiServer) Run() {
 	// POST
 	postRouter := router.Methods(http.MethodPost).Subrouter()
 	postRouter.HandleFunc("/account", HTTPHandler(s.createAccount))
+	postRouter.HandleFunc("/account/deposit", HTTPHandler(s.depositAccount))
 	// GET
 	getRouter := router.Methods(http.MethodGet).Subrouter()
 	getRouter.HandleFunc("/account", HTTPHandler(s.getAccount))
@@ -94,7 +95,7 @@ func (s *JSONApiServer) updateAccount(w http.ResponseWriter, r *http.Request) er
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
 	defer r.Body.Close()
-	account, err := s.storage.UpdateAccount(reqUpd.FirstName, reqUpd.LastName, reqUpd.CardNumber, uuid)
+	account, err := s.storage.UpdateAccount(reqUpd.FirstName, reqUpd.LastName, reqUpd.CardNumber, 0, uuid)
 	if err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
@@ -110,6 +111,25 @@ func (s *JSONApiServer) deleteAccount(w http.ResponseWriter, r *http.Request) er
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
 	return WriteJSON(w, http.StatusOK, "account was deleted")
+}
+
+func (s *JSONApiServer) depositAccount(w http.ResponseWriter, r *http.Request) error {
+	reqDep := &RequestDeposit{}
+	if err := json.NewDecoder(r.Body).Decode(reqDep); err != nil {
+		return WriteJSON(w, http.StatusBadRequest, "account doesn't exist")
+	}
+
+	acc, err := s.storage.GetAccountByID(reqDep.ID)
+	if err != nil {
+		return WriteJSON(w, http.StatusBadRequest, "account doesn't exist")
+	}
+	acc.Balance = acc.Balance + reqDep.Balance
+	updatedAccount, err := s.storage.DepositAccount(reqDep.ID, acc.Balance)
+	if err != nil {
+		return WriteJSON(w, http.StatusBadRequest, "account doesn't exist")
+	}
+
+	return WriteJSON(w, http.StatusOK, updatedAccount)
 }
 
 // ============================================================================
