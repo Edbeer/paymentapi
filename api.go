@@ -13,13 +13,13 @@ import (
 
 type JSONApiServer struct {
 	listenAddr string
-	storage Storage
+	storage    Storage
 }
 
 func NewJSONApiServer(listenAddr string, storage Storage) *JSONApiServer {
 	return &JSONApiServer{
 		listenAddr: listenAddr,
-		storage: storage,
+		storage:    storage,
 	}
 }
 
@@ -38,7 +38,7 @@ func (s *JSONApiServer) Run() {
 	// DELETE
 	deleteRouter := router.Methods(http.MethodDelete).Subrouter()
 	deleteRouter.HandleFunc("/account/{id}", AuthJWT(HTTPHandler(s.deleteAccount)))
-	
+
 	http.ListenAndServe(s.listenAddr, router)
 }
 
@@ -47,7 +47,7 @@ func (s *JSONApiServer) createAccount(w http.ResponseWriter, r *http.Request) er
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
-
+	defer r.Body.Close()
 	reqAcc := NewAccount(req.FirstName, req.LastName)
 	account, err := s.storage.CreateAccount(reqAcc)
 	if err != nil {
@@ -63,6 +63,7 @@ func (s *JSONApiServer) createAccount(w http.ResponseWriter, r *http.Request) er
 	return WriteJSON(w, http.StatusOK, account)
 }
 
+// get all accounts
 func (s *JSONApiServer) getAccount(w http.ResponseWriter, r *http.Request) error {
 	accounts, err := s.storage.GetAccount()
 	if err != nil {
@@ -92,7 +93,7 @@ func (s *JSONApiServer) updateAccount(w http.ResponseWriter, r *http.Request) er
 	if err := json.NewDecoder(r.Body).Decode(reqUpd); err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
-
+	defer r.Body.Close()
 	account, err := s.storage.UpdateAccount(reqUpd.FirstName, reqUpd.LastName, reqUpd.CardNumber, uuid)
 	if err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
@@ -110,6 +111,16 @@ func (s *JSONApiServer) deleteAccount(w http.ResponseWriter, r *http.Request) er
 	}
 	return WriteJSON(w, http.StatusOK, "account was deleted")
 }
+
+// ============================================================================
+func (s *JSONApiServer) PaymentCreate(w http.ResponseWriter, r *http.Request) error {
+	return nil
+}
+
+func (s *JSONApiServer) PaymentRefund(w http.ResponseWriter, r *http.Request) error {
+	return nil
+}
+
 
 type ApiFunc func(w http.ResponseWriter, r *http.Request) error
 
@@ -141,7 +152,7 @@ func AuthJWT(next http.HandlerFunc) http.HandlerFunc {
 			WriteJSON(w, http.StatusBadRequest, "permission denied")
 			return
 		}
-		
+
 		claims, ok := token.Claims.(jwt.MapClaims)
 		if !ok {
 			WriteJSON(w, http.StatusBadRequest, "permission denied")
@@ -152,7 +163,7 @@ func AuthJWT(next http.HandlerFunc) http.HandlerFunc {
 			WriteJSON(w, http.StatusBadRequest, "permission denied")
 			return
 		}
-		
+
 		if claims["id"] != uid.String() {
 			WriteJSON(w, http.StatusBadRequest, "permission denied")
 			return
@@ -165,8 +176,8 @@ func AuthJWT(next http.HandlerFunc) http.HandlerFunc {
 // Create JWT
 func CreateJWT(account *Account) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"id": account.ID.String(),
-		"card": account.CardNumber,
+		"id":        account.ID.String(),
+		"card":      account.CardNumber,
 		"expire_at": 15000,
 	})
 
@@ -192,6 +203,7 @@ func ValidateJWT(tokenString string) (*jwt.Token, error) {
 	})
 }
 
+// Get id from url
 func GetUUID(r *http.Request) (uuid.UUID, error) {
 	id := mux.Vars(r)["id"]
 	uid, err := uuid.Parse(id)
