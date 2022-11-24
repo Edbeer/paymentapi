@@ -12,7 +12,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := db.InitTable(); err != nil {
+	if err := db.InitTables(); err != nil {
 		log.Fatal(err)
 	}
 	s := NewJSONApiServer(":8080", db)

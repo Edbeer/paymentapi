@@ -35,11 +35,17 @@ func NewPostgresStorage() (*PostgresStorage, error) {
 	}, err
 }
 
-func (s *PostgresStorage) InitTable() error {
-	return s.CreateTable()
+func (s *PostgresStorage) InitTables() error {
+	if err := s.CreateAccountTable(); err != nil {
+		return err
+	}
+	if err := s.CreatePaymentTable(); err != nil {
+		return err
+	}
+	return nil
 }
 
-func (s *PostgresStorage) CreateTable() error {
+func (s *PostgresStorage) CreateAccountTable() error {
 	query := `CREATE TABLE IF NOT EXISTS account 
 	(
 		id UUID PRIMARY KEY,
@@ -47,6 +53,25 @@ func (s *PostgresStorage) CreateTable() error {
 		last_name VARCHAR(50),
 		card_number serial,
 		balance serial,
+		created_at TIMESTAMP
+	)`
+
+	_, err := s.db.Exec(query)
+	return err
+}
+
+func (s *PostgresStorage) CreatePaymentTable() error {
+	query := `CREATE TABLE IF NOT EXISTS payment 
+	(
+		id UUID,
+		business_id UUID PRIMARY KEY,
+		foreign key (business_id) references account (id),
+		order_id serial,
+		operation VARCHAR(50),
+		amount serial,
+		status VARCHAR(50),
+		description VARCHAR(50),
+		card_number serial,
 		created_at TIMESTAMP
 	)`
 
@@ -128,4 +153,8 @@ func (s *PostgresStorage) DeleteAccount(id uuid.UUID) error {
 	query := `DELETE FROM account WHERE id = $1`
 	_, err := s.db.Exec(query, id)
 	return err
+}
+
+func (s *PostgresStorage) CreatePayment() (*Payment, error) {
+	return nil, nil
 }

@@ -18,8 +18,6 @@ type Payment struct {
 	Description     string    `json:"description"`
 	Currency        string    `json:"currency"`
 	CardNumber      uint64    `json:"card_number"`
-	CardExpiryMonth int       `json:"card_expiry_month"`
-	CardExpiryYear  int       `json:"card_expiry_year"`
 	CreatedAt       time.Time `json:"creation_at"`
 }
 
