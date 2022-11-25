@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
@@ -12,14 +13,19 @@ import (
 )
 
 type JSONApiServer struct {
-	listenAddr string
-	storage    Storage
+	storage Storage
+	server  *http.Server
 }
 
 func NewJSONApiServer(listenAddr string, storage Storage) *JSONApiServer {
 	return &JSONApiServer{
-		listenAddr: listenAddr,
-		storage:    storage,
+		storage: storage,
+		server: &http.Server{
+			Addr: listenAddr,
+			ReadTimeout:  5 * time.Second,                          
+			WriteTimeout: 10 * time.Second,                                 
+			IdleTimeout:  120 * time.Second,                                
+		},
 	}
 }
 
@@ -39,8 +45,8 @@ func (s *JSONApiServer) Run() {
 	// DELETE
 	deleteRouter := router.Methods(http.MethodDelete).Subrouter()
 	deleteRouter.HandleFunc("/account/{id}", AuthJWT(HTTPHandler(s.deleteAccount)))
-
-	http.ListenAndServe(s.listenAddr, router)
+	s.server.Handler = router
+	s.server.ListenAndServe()
 }
 
 func (s *JSONApiServer) createAccount(w http.ResponseWriter, r *http.Request) error {
@@ -50,7 +56,7 @@ func (s *JSONApiServer) createAccount(w http.ResponseWriter, r *http.Request) er
 	}
 	defer r.Body.Close()
 	reqAcc := NewAccount(req.FirstName, req.LastName)
-	account, err := s.storage.CreateAccount(reqAcc)
+	account, err := s.storage.CreateAccount(r.Context(), reqAcc)
 	if err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
@@ -66,7 +72,7 @@ func (s *JSONApiServer) createAccount(w http.ResponseWriter, r *http.Request) er
 
 // get all accounts
 func (s *JSONApiServer) getAccount(w http.ResponseWriter, r *http.Request) error {
-	accounts, err := s.storage.GetAccount()
+	accounts, err := s.storage.GetAccount(r.Context())
 	if err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
@@ -78,7 +84,7 @@ func (s *JSONApiServer) getAccountByID(w http.ResponseWriter, r *http.Request) e
 	if err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
-	account, err := s.storage.GetAccountByID(uuid)
+	account, err := s.storage.GetAccountByID(r.Context(), uuid)
 	if err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
@@ -95,7 +101,7 @@ func (s *JSONApiServer) updateAccount(w http.ResponseWriter, r *http.Request) er
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
 	defer r.Body.Close()
-	account, err := s.storage.UpdateAccount(reqUpd.FirstName, reqUpd.LastName, reqUpd.CardNumber, 0, uuid)
+	account, err := s.storage.UpdateAccount(r.Context(), reqUpd, uuid)
 	if err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
@@ -107,7 +113,7 @@ func (s *JSONApiServer) deleteAccount(w http.ResponseWriter, r *http.Request) er
 	if err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
-	if err := s.storage.DeleteAccount(uuid); err != nil {
+	if err := s.storage.DeleteAccount(r.Context(), uuid); err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
 	return WriteJSON(w, http.StatusOK, "account was deleted")
@@ -119,12 +125,12 @@ func (s *JSONApiServer) depositAccount(w http.ResponseWriter, r *http.Request) e
 		return WriteJSON(w, http.StatusBadRequest, "account doesn't exist")
 	}
 
-	acc, err := s.storage.GetAccountByID(reqDep.ID)
+	acc, err := s.storage.GetAccountByID(r.Context(), reqDep.ID)
 	if err != nil {
 		return WriteJSON(w, http.StatusBadRequest, "account doesn't exist")
 	}
 	acc.Balance = acc.Balance + reqDep.Balance
-	updatedAccount, err := s.storage.DepositAccount(reqDep.ID, acc.Balance)
+	updatedAccount, err := s.storage.DepositAccount(r.Context(), reqDep.ID, acc.Balance)
 	if err != nil {
 		return WriteJSON(w, http.StatusBadRequest, "account doesn't exist")
 	}
@@ -140,7 +146,6 @@ func (s *JSONApiServer) PaymentCreate(w http.ResponseWriter, r *http.Request) er
 func (s *JSONApiServer) PaymentRefund(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
-
 
 type ApiFunc func(w http.ResponseWriter, r *http.Request) error
 
