@@ -21,35 +21,32 @@ type Payment struct {
 	CreatedAt   time.Time `json:"creation_at"`
 }
 
-func NewPayment(paymentCreate *PaymentRequest,
-	account *Account,
-	status string,
-	description string) *Payment {
+func NewPayment(paymentCreate *PaymentRequest, personalAccount *Account, businessAccount *Account) *Payment {
 	return &Payment{
-		ID:          uuid.New(),
-		BusinessId:  account.ID,
-		OrderId:     paymentCreate.OrderId,
-		Operation:   "",
-		Amount:      paymentCreate.Amount,
-		Status:      status,
-		Description: description,
-		Currency:    "RUB",
-		CardNumber:  account.CardNumber,
-		CreatedAt:   time.Now(),
+		ID:         uuid.New(),
+		BusinessId: businessAccount.ID,
+		OrderId:    paymentCreate.OrderId,
+		Operation:  "",
+		Amount:     paymentCreate.Amount,
+		Currency:   "RUB",
+		CardNumber: personalAccount.CardNumber,
+		CreatedAt:  time.Now(),
 	}
 }
 
 type PaymentRequest struct {
-	OrderId          string `json:"order_id"`
-	Amount           uint64 `json:"amount"`
-	Currency         string `json:"currency"`
-	CardNumber       uint64 `json:"card_number"`
-	CardSecurityCode int    `json:"card_security_code"`
+	AccountId        uuid.UUID `json:"id"`
+	OrderId          string    `json:"order_id"`
+	Amount           uint64    `json:"amount"`
+	Currency         string    `json:"currency"`
+	CardNumber       uint64    `json:"card_number"`
+	CardSecurityCode int       `json:"card_security_code"`
 }
 
 type RequestDeposit struct {
-	ID      uuid.UUID `json:"id"`
-	Balance uint64    `json:"balance"`
+	ID         uuid.UUID `json:"id"`
+	CardNumber uint64    `json:"card_number"`
+	Balance    uint64    `json:"balance"`
 }
 
 // Request for update account
@@ -72,6 +69,7 @@ type Account struct {
 	LastName   string    `json:"last_name"`
 	CardNumber uint64    `json:"card_number"`
 	Balance    uint64    `json:"balance"`
+	Statement  []string  `json:"statement"`
 	CreatedAt  time.Time `json:"created_at"`
 }
 
@@ -82,6 +80,7 @@ func NewAccount(firstName, lastName string) *Account {
 		LastName:   lastName,
 		CardNumber: uint64(rand.Intn(10000000)),
 		Balance:    0,
+		Statement: []string{},
 		CreatedAt:  time.Now(),
 	}
 }

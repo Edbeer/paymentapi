@@ -21,10 +21,10 @@ func NewJSONApiServer(listenAddr string, storage Storage) *JSONApiServer {
 	return &JSONApiServer{
 		storage: storage,
 		server: &http.Server{
-			Addr: listenAddr,
-			ReadTimeout:  5 * time.Second,                          
-			WriteTimeout: 10 * time.Second,                                 
-			IdleTimeout:  120 * time.Second,                                
+			Addr:         listenAddr,
+			ReadTimeout:  5 * time.Second,
+			WriteTimeout: 10 * time.Second,
+			IdleTimeout:  120 * time.Second,
 		},
 	}
 }
@@ -35,6 +35,7 @@ func (s *JSONApiServer) Run() {
 	postRouter := router.Methods(http.MethodPost).Subrouter()
 	postRouter.HandleFunc("/account", HTTPHandler(s.createAccount))
 	postRouter.HandleFunc("/account/deposit", HTTPHandler(s.depositAccount))
+	postRouter.HandleFunc("/payment/create", HTTPHandler(s.paymentCreate))
 	// GET
 	getRouter := router.Methods(http.MethodGet).Subrouter()
 	getRouter.HandleFunc("/account", HTTPHandler(s.getAccount))
@@ -96,7 +97,7 @@ func (s *JSONApiServer) updateAccount(w http.ResponseWriter, r *http.Request) er
 	if err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
-	reqUpd := &RequestUpdate{}
+	reqUpd := &Account{}
 	if err := json.NewDecoder(r.Body).Decode(reqUpd); err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
@@ -127,10 +128,11 @@ func (s *JSONApiServer) depositAccount(w http.ResponseWriter, r *http.Request) e
 
 	acc, err := s.storage.GetAccountByID(r.Context(), reqDep.ID)
 	if err != nil {
-		return WriteJSON(w, http.StatusBadRequest, "account doesn't exist")
+		return WriteJSON(w, http.StatusBadRequest, "ccount doesn't exist")
 	}
 	acc.Balance = acc.Balance + reqDep.Balance
-	updatedAccount, err := s.storage.DepositAccount(r.Context(), reqDep.ID, acc.Balance)
+	reqDep.Balance = acc.Balance
+	updatedAccount, err := s.storage.DepositAccount(r.Context(), reqDep)
 	if err != nil {
 		return WriteJSON(w, http.StatusBadRequest, "account doesn't exist")
 	}
@@ -139,8 +141,82 @@ func (s *JSONApiServer) depositAccount(w http.ResponseWriter, r *http.Request) e
 }
 
 // ============================================================================
-func (s *JSONApiServer) PaymentCreate(w http.ResponseWriter, r *http.Request) error {
-	return nil
+// Payment create
+func (s *JSONApiServer) paymentCreate(w http.ResponseWriter, r *http.Request) error {
+	reqPay := &PaymentRequest{}
+	if err := json.NewDecoder(r.Body).Decode(reqPay); err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
+	// business account
+	businessAccID := r.Header.Get("From")
+	id, err := uuid.Parse(businessAccID)
+	if err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
+	businessAccount, err := s.storage.GetAccountByID(r.Context(), id)
+	if err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
+	// personal account
+	personalAccountId := reqPay.AccountId
+	personalAccount, err := s.storage.GetAccountByID(r.Context(), personalAccountId)
+	if err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
+	// balance < req amount
+	if personalAccount.Balance < reqPay.Amount {
+		payment := NewPayment(reqPay, personalAccount, businessAccount)
+		savedPayment, err := s.storage.SavePayment(r.Context(), payment)
+		if err != nil {
+			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+		}
+		businessAccount.Statement = append(businessAccount.Statement, savedPayment.ID.String())
+		businessAccount, err = s.storage.UpdateAccount(r.Context(), businessAccount, id)
+		if err != nil {
+			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+		}
+		return WriteJSON(w, http.StatusBadGateway, map[string]any{
+			"payment":     savedPayment,
+			"businessAcc": businessAccount,
+		})
+	}
+	// payment success
+	// balance > req amount
+	// personal acc new balance
+	personalAccount.Balance = personalAccount.Balance - reqPay.Amount
+	personalAccount, err = s.storage.SaveBalance(r.Context(), personalAccount, personalAccount.Balance)
+	if err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
+	// business acc new balance
+	businessAccount.Balance = businessAccount.Balance + reqPay.Amount
+	businessAccount, err = s.storage.SaveBalance(r.Context(), businessAccount, businessAccount.Balance)
+	if err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
+	// create new payment
+	payment := NewPayment(reqPay, personalAccount, businessAccount)
+	savedPayment, err := s.storage.SavePayment(r.Context(), payment)
+	if err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
+	// bus acc append statement
+	businessAccount.Statement = append(businessAccount.Statement, savedPayment.ID.String())
+	businessAccount, err = s.storage.UpdateStatement(r.Context(), id, savedPayment.ID)
+	if err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
+	// per acc append statement
+	personalAccount.Statement = append(personalAccount.Statement, savedPayment.ID.String())
+	personalAccount, err = s.storage.UpdateStatement(r.Context(), personalAccountId, savedPayment.ID)
+	if err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
+	return WriteJSON(w, http.StatusOK, map[string]any{
+		"payment":     savedPayment,
+		"businessAcc": businessAccount,
+		"personalAcc": personalAccount,
+	})
 }
 
 func (s *JSONApiServer) PaymentRefund(w http.ResponseWriter, r *http.Request) error {
