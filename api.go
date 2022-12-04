@@ -38,6 +38,7 @@ func (s *JSONApiServer) Run() {
 	postRouter.HandleFunc("/payment/auth", HTTPHandler(s.createdPayment))
 	postRouter.HandleFunc("/payment/capture/{id}", HTTPHandler(s.capturePayment))
 	postRouter.HandleFunc("/payment/refund/{id}", HTTPHandler(s.refundPayment))
+	postRouter.HandleFunc("/payment/cancel/{id}", HTTPHandler(s.cancelPayment))
 	// GET
 	getRouter := router.Methods(http.MethodGet).Subrouter()
 	getRouter.HandleFunc("/account", HTTPHandler(s.getAccount))
@@ -379,7 +380,7 @@ func (s *JSONApiServer) refundPayment(w http.ResponseWriter, r *http.Request) er
 				Status: invalidPayment.Status,
 			})
 		}
-		// Successful payment
+		// Successful refund
 		referncedPayment.Amount = referncedPayment.Amount - reqPaid.Amount
 		referncedPayment, err = s.storage.SavePayment(r.Context(), referncedPayment)
 		if err != nil {
@@ -408,6 +409,101 @@ func (s *JSONApiServer) refundPayment(w http.ResponseWriter, r *http.Request) er
 		// update new merchant balance and append new statement
 		merchant.Balance = merchant.Balance - reqPaid.Amount
 		merchant, err = s.storage.SaveBalance(r.Context(), merchant, merchant.Balance, 0)
+		if err != nil {
+			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+		}
+		merchant.Statement = append(merchant.Statement, completedPayment.ID.String())
+		merchant, err = s.storage.UpdateStatement(r.Context(), merchant.ID, completedPayment.ID)
+		if err != nil {
+			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+		}
+		return WriteJSON(w, http.StatusOK, PaymentResponse{
+			ID:     completedPayment.ID,
+			Status: completedPayment.Status,
+		})
+	}
+	return WriteJSON(w, http.StatusOK, PaymentResponse{
+		ID:     reqPaid.PaymentId,
+		Status: "Invalid transaction",
+	})
+}
+
+// cancel payment: cancel authorization payment
+func (s *JSONApiServer) cancelPayment(w http.ResponseWriter, r *http.Request) error {
+	// payment id
+	paymentId, err := GetUUID(r)
+	if err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
+
+	reqPaid := &PaidRequest{}
+	if err := json.NewDecoder(r.Body).Decode(reqPaid); err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
+	// get merchant
+	merchantId, err := getMerchantID(r)
+	if err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
+	merchant, err := s.storage.GetAccountByID(r.Context(), merchantId)
+	if err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
+	// check referenced payment
+	reqPaid.Operation = "Cancel"
+	reqPaid.PaymentId = paymentId
+	referncedPayment, err := s.storage.GetPaymentByID(r.Context(), paymentId)
+	if err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
+	if referncedPayment.Operation == "Authorization" && referncedPayment.Status == "Approved" {
+		// Invalid amount
+		if referncedPayment.Amount < reqPaid.Amount {
+			completedPayment := CreateCompletePayment(reqPaid, referncedPayment, "Invalid amount")
+			invalidPayment, err := s.storage.SavePayment(r.Context(), completedPayment)
+			if err != nil {
+				return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+			}
+			merchant.Statement = append(merchant.Statement, invalidPayment.ID.String())
+			merchant, err = s.storage.UpdateStatement(r.Context(), merchant.ID, invalidPayment.ID)
+			if err != nil {
+				return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+			}
+			return WriteJSON(w, http.StatusOK, PaymentResponse{
+				ID:     invalidPayment.ID,
+				Status: invalidPayment.Status,
+			})
+		}
+		// Successful refund
+		referncedPayment.Amount = referncedPayment.Amount - reqPaid.Amount
+		referncedPayment, err = s.storage.SavePayment(r.Context(), referncedPayment)
+		if err != nil {
+			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+		}
+		completedPayment := CreateCompletePayment(reqPaid, referncedPayment, "Successful cancel")
+		completedPayment, err = s.storage.SavePayment(r.Context(), completedPayment)
+		if err != nil {
+			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+		}
+		// update new personal account balance and append new statement
+		personalAccount, err := s.storage.GetAccountByCard(r.Context(), referncedPayment.CardNumber)
+		if err != nil {
+			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+		}
+		personalAccount.Balance = personalAccount.Balance + reqPaid.Amount
+		personalAccount.BlockedMoney = personalAccount.BlockedMoney - reqPaid.Amount
+		personalAccount, err = s.storage.SaveBalance(r.Context(), personalAccount, personalAccount.Balance, personalAccount.BlockedMoney)
+		if err != nil {
+			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+		}
+		personalAccount.Statement = append(personalAccount.Statement, completedPayment.ID.String())
+		personalAccount, err = s.storage.UpdateStatement(r.Context(), personalAccount.ID, completedPayment.ID)
+		if err != nil {
+			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+		}
+		// update new merchant balance and append new statement
+		merchant.BlockedMoney = merchant.BlockedMoney - reqPaid.Amount
+		merchant, err = s.storage.SaveBalance(r.Context(), merchant, 0, merchant.BlockedMoney)
 		if err != nil {
 			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 		}
