@@ -43,15 +43,15 @@ func NewPostgresStorage() (*PostgresStorage, error) {
 	}, err
 }
 
-func (s *PostgresStorage) InitTables(ctx context.Context) error {
-	if err := s.CreateAccountTable(ctx); err != nil {
-		return err
-	}
-	if err := s.CreatePaymentTable(ctx); err != nil {
-		return err
-	}
-	return nil
-}
+// func (s *PostgresStorage) InitTables(ctx context.Context) error {
+// 	if err := s.CreateAccountTable(ctx); err != nil {
+// 		return err
+// 	}
+// 	if err := s.CreatePaymentTable(ctx); err != nil {
+// 		return err
+// 	}
+// 	return nil
+// }
 
 func (s *PostgresStorage) CreateAccountTable(ctx context.Context) error {
 	query := `CREATE TABLE IF NOT EXISTS account 

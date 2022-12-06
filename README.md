@@ -1,4 +1,4 @@
-![image.jpg](img/schema.jpg)
+![schema.jpg](img/schema.jpg)
 
 ### The above figure is a state transition in the payment process.
 

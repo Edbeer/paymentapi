@@ -19,3 +19,13 @@ docker-exec: docker-start
 
 docker-stop:
 	docker stop payment-postgres
+
+# migrations
+migrate-create:
+	migrate create -ext sql -dir ./migrations -seq paymentdb
+
+migrate-up:
+	migrate -path ./migrations -database "postgres://postgres:postgres@localhost:5432/paymentdb?sslmode=disable" up
+
+migrate-down:
+	migrate -path ./migrations -database "postgres://postgres:postgres@localhost:5432/paymentdb?sslmode=disable" down
