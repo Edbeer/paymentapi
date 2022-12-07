@@ -20,6 +20,7 @@ func main() {
 	// if err := db.InitTables(ctx); err != nil {
 	// 	log.Fatal(err)
 	// }
+	log.Println("init server")
 	s := NewJSONApiServer(":8080", db)
 	go func() {
 		s.Run()

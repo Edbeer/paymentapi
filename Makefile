@@ -5,20 +5,21 @@ run: build
 	@./bin/api
 
 docker:
-	docker run --name payment-postgres \
+	docker run --name paymentdb \
+	-e POSTGRES_HOST=paymentdb \
 	-e POSTGRES_PASSWORD=postgres \
 	-e POSTGRES_USER=postgres \
 	-e POSTGRES_DB=paymentdb \
 	-p 5432:5432 -d postgres
 
 docker-start:
-	docker start payment-postgres
+	docker start paymentdb
 
 docker-exec: docker-start
-	docker exec -it payment-postgres psql -U postgres paymentdb
+	docker exec -it paymentdb psql -U postgres paymentdb
 
 docker-stop:
-	docker stop payment-postgres
+	docker stop paymentdb
 
 # migrations
 migrate-create:
