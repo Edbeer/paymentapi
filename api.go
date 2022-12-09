@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"os"
 	"time"
@@ -64,12 +65,27 @@ func (s *JSONApiServer) createAccount(w http.ResponseWriter, r *http.Request) er
 	if err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
-
+	// jwt-token
 	tokenString, err := CreateJWT(account)
 	if err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
 	w.Header().Add("x-jwt-token", tokenString)
+
+	// refresh token
+	refreshToken := newRefreshToken()
+	// cookie
+	cookie := &http.Cookie{
+		Name: "refresh-token",
+		Value: refreshToken,
+		Path: "/",
+		RawExpires: "",
+		MaxAge: 86400,
+		Secure: false,
+		HttpOnly: true,
+		SameSite: 0,
+	}
+	http.SetCookie(w, cookie)
 	fmt.Println(tokenString)
 	return WriteJSON(w, http.StatusOK, account)
 }
@@ -623,4 +639,19 @@ func GetUUID(r *http.Request) (uuid.UUID, error) {
 	}
 
 	return uid, nil
+}
+
+// refresh token
+func newRefreshToken() string {
+	b := make([]byte, 32)
+
+	s := rand.NewSource(time.Now().Unix())
+	r := rand.New(s)
+
+	_, err := r.Read(b)
+	if err != nil {
+		return ""
+	}
+
+	return fmt.Sprintf("%x", b)
 }

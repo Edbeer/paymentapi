@@ -28,7 +28,6 @@ services:
       - POSTGRES_DB=paymentdb
     volumes:
       - ./migrations/000001_paymentdb.up.sql:/docker-entrypoint-initdb.d/initdb.sql
-      - ./postgres-data:/var/lib/postgresql/data
     restart: always
     networks:
       - backend
