@@ -1,8 +1,8 @@
 version: '3.9'
 
 services:
-  paymentapp:
-    container_name: payment
+  paymentapi:
+    container_name: paymentapi
     build:
       dockerfile: Dockerfile
     command: ./wait-for-postgres.sh paymentdb ./bin/api
@@ -26,14 +26,16 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=paymentdb
+      - PGDATA = "/var/lib/postgresql/data/pgdata"
     volumes:
       - ./migrations/000001_paymentdb.up.sql:/docker-entrypoint-initdb.d/initdb.sql
+      - ./pgdata:/var/lib/postgresql/data
     restart: always
     networks:
       - backend
 
 volumes:
-  migrations:
+  pgdata:
 networks:
   backend:
     driver: bridge
