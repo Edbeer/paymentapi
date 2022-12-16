@@ -1,27 +1,14 @@
-package main
+package storage
 
 import (
 	"context"
 	"database/sql"
 
+	"github.com/Edbeer/paymentapi/internal/models"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 	_ "github.com/lib/pq"
 )
-
-type Storage interface {
-	CreateAccount(ctx context.Context, account *Account) (*Account, error)
-	GetAccount(ctx context.Context) ([]*Account, error)
-	GetAccountByID(ctx context.Context, id uuid.UUID) (*Account, error)
-	GetAccountByCard(ctx context.Context, card uint64) (*Account, error)
-	UpdateAccount(ctx context.Context, reqUp *Account, id uuid.UUID) (*Account, error)
-	DeleteAccount(ctx context.Context, id uuid.UUID) error
-	DepositAccount(ctx context.Context, reqDep *RequestDeposit) (*Account, error)
-	SavePayment(ctx context.Context, payment *Payment) (*Payment, error)
-	GetPaymentByID(ctx context.Context, id uuid.UUID) (*Payment, error)
-	SaveBalance(ctx context.Context, account *Account, balance, bmoney uint64) (*Account, error)
-	UpdateStatement(ctx context.Context, id, paymentId uuid.UUID) (*Account, error)
-}
 
 type PostgresStorage struct {
 	db *sql.DB
@@ -43,64 +30,14 @@ func NewPostgresStorage() (*PostgresStorage, error) {
 	}, err
 }
 
-// func (s *PostgresStorage) InitTables(ctx context.Context) error {
-// 	if err := s.CreateAccountTable(ctx); err != nil {
-// 		return err
-// 	}
-// 	if err := s.CreatePaymentTable(ctx); err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
-
-func (s *PostgresStorage) CreateAccountTable(ctx context.Context) error {
-	query := `CREATE TABLE IF NOT EXISTS account 
-	(
-		id UUID PRIMARY KEY,
-		first_name VARCHAR(50),
-		last_name VARCHAR(50),
-		card_number serial,
-		card_expiry_month serial,
-		card_expiry_year serial,
-		card_security_code serial,
-		balance serial,
-		blocked_money serial,
-		statement text[],
-		created_at TIMESTAMP
-	)`
-
-	_, err := s.db.ExecContext(ctx, query)
-	return err
-}
-
-func (s *PostgresStorage) CreatePaymentTable(ctx context.Context) error {
-	query := `CREATE TABLE IF NOT EXISTS payment 
-	(
-		id UUID,
-		business_id UUID,
-		order_id serial,
-		operation VARCHAR(50),
-		amount serial,
-		status VARCHAR(50),
-		currency VARCHAR(50),
-		card_number serial,
-		card_expiry_month serial,
-		card_expiry_year serial,
-		created_at TIMESTAMP
-	)`
-
-	_, err := s.db.ExecContext(ctx, query)
-	return err
-}
-
-func (s *PostgresStorage) CreateAccount(ctx context.Context, account *Account) (*Account, error) {
+func (s *PostgresStorage) CreateAccount(ctx context.Context, account *models.Account) (*models.Account, error) {
 	query := `INSERT INTO account (id, first_name, 
 		last_name, card_number, card_expiry_month, 
 		card_expiry_year, card_security_code, 
 		balance, blocked_money, statement, created_at)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 			RETURNING *`
-	acc := &Account{}
+	acc := &models.Account{}
 	if err := s.db.QueryRowContext(
 		ctx, query,
 		account.ID,
@@ -128,7 +65,7 @@ func (s *PostgresStorage) CreateAccount(ctx context.Context, account *Account) (
 	return acc, nil
 }
 
-func (s *PostgresStorage) GetAccount(ctx context.Context) ([]*Account, error) {
+func (s *PostgresStorage) GetAccount(ctx context.Context) ([]*models.Account, error) {
 	query := `SELECT * FROM account`
 
 	rows, err := s.db.QueryContext(ctx, query)
@@ -136,8 +73,8 @@ func (s *PostgresStorage) GetAccount(ctx context.Context) ([]*Account, error) {
 		return nil, err
 	}
 
-	accounts := []*Account{}
-	acc := &Account{}
+	accounts := []*models.Account{}
+	acc := &models.Account{}
 	for rows.Next() {
 		if err := rows.Scan(
 			&acc.ID, &acc.FirstName,
@@ -154,10 +91,10 @@ func (s *PostgresStorage) GetAccount(ctx context.Context) ([]*Account, error) {
 	return accounts, nil
 }
 
-func (s *PostgresStorage) GetAccountByID(ctx context.Context, id uuid.UUID) (*Account, error) {
+func (s *PostgresStorage) GetAccountByID(ctx context.Context, id uuid.UUID) (*models.Account, error) {
 	query := `SELECT * FROM account 
 			WHERE id = $1`
-	acc := &Account{}
+	acc := &models.Account{}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -178,10 +115,10 @@ func (s *PostgresStorage) GetAccountByID(ctx context.Context, id uuid.UUID) (*Ac
 	return acc, nil
 }
 
-func (s *PostgresStorage) GetAccountByCard(ctx context.Context, card uint64) (*Account, error) {
+func (s *PostgresStorage) GetAccountByCard(ctx context.Context, card uint64) (*models.Account, error) {
 	query := `SELECT * FROM account 
 			WHERE card_number = $1`
-	acc := &Account{}
+	acc := &models.Account{}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -202,14 +139,14 @@ func (s *PostgresStorage) GetAccountByCard(ctx context.Context, card uint64) (*A
 	return acc, nil
 }
 
-func (s *PostgresStorage) UpdateAccount(ctx context.Context, reqUp *Account, id uuid.UUID) (*Account, error) {
+func (s *PostgresStorage) UpdateAccount(ctx context.Context, reqUp *models.Account, id uuid.UUID) (*models.Account, error) {
 	query := `UPDATE account
 				SET first_name = COALESCE(NULLIF($1, ''), first_name),
 					last_name = COALESCE(NULLIF($2, ''), last_name),
 					card_number = COALESCE(NULLIF($3, 0), card_number)
 				WHERE id = $4
 				RETURNING *`
-	acc := &Account{}
+	acc := &models.Account{}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -237,13 +174,13 @@ func (s *PostgresStorage) UpdateAccount(ctx context.Context, reqUp *Account, id 
 	return acc, nil
 }
 
-func (s *PostgresStorage) UpdateStatement(ctx context.Context, id, paymentId uuid.UUID) (*Account, error) {
+func (s *PostgresStorage) UpdateStatement(ctx context.Context, id, paymentId uuid.UUID) (*models.Account, error) {
 	// TODO change id on card_number
 	query := `UPDATE account
 				SET statement = array_append(statement, $1)
 				WHERE id = $2
 				RETURNING *`
-	acc := &Account{}
+	acc := &models.Account{}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -276,12 +213,12 @@ func (s *PostgresStorage) DeleteAccount(ctx context.Context, id uuid.UUID) error
 	return err
 }
 
-func (s *PostgresStorage) DepositAccount(ctx context.Context, reqDep *RequestDeposit) (*Account, error) {
+func (s *PostgresStorage) DepositAccount(ctx context.Context, reqDep *models.RequestDeposit) (*models.Account, error) {
 	query := `UPDATE account
 				SET balance = COALESCE(NULLIF($1, 0), balance)
 				WHERE id = $2 and card_number = $3
 				RETURNING *`
-	acc := &Account{}
+	acc := &models.Account{}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -309,14 +246,14 @@ func (s *PostgresStorage) DepositAccount(ctx context.Context, reqDep *RequestDep
 	return acc, nil
 }
 
-func (s *PostgresStorage) SavePayment(ctx context.Context, payment *Payment) (*Payment, error) {
+func (s *PostgresStorage) SavePayment(ctx context.Context, payment *models.Payment) (*models.Payment, error) {
 	query := `INSERT INTO payment (id, business_id, 
 		order_id, operation, amount, status, 
 		currency, card_number, card_expiry_month,
 		 card_expiry_year, created_at)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 			RETURNING *`
-	pay := &Payment{}
+	pay := &models.Payment{}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -351,9 +288,9 @@ func (s *PostgresStorage) SavePayment(ctx context.Context, payment *Payment) (*P
 	return pay, nil
 }
 
-func (s *PostgresStorage) GetPaymentByID(ctx context.Context, id uuid.UUID) (*Payment, error) {
+func (s *PostgresStorage) GetPaymentByID(ctx context.Context, id uuid.UUID) (*models.Payment, error) {
 	query := `SELECT * FROM payment WHERE id = $1`
-	pay := &Payment{}
+	pay := &models.Payment{}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -374,13 +311,13 @@ func (s *PostgresStorage) GetPaymentByID(ctx context.Context, id uuid.UUID) (*Pa
 	return pay, nil
 }
 
-func (s *PostgresStorage) SaveBalance(ctx context.Context, account *Account, balance, bmoney uint64) (*Account, error) {
+func (s *PostgresStorage) SaveBalance(ctx context.Context, account *models.Account, balance, bmoney uint64) (*models.Account, error) {
 	query := `UPDATE account
 				SET balance = COALESCE(NULLIF($1, 0), balance),
 					blocked_money = COALESCE(NULLIF($2, 0), blocked_money)
 				WHERE id = $3
 				RETURNING *`
-	acc := &Account{}
+	acc := &models.Account{}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
