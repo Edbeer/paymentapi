@@ -15,7 +15,7 @@ type Storage interface {
 	CreateAccount(ctx context.Context, account *models.Account) (*models.Account, error)
 	GetAccount(ctx context.Context) ([]*models.Account, error)
 	GetAccountByID(ctx context.Context, id uuid.UUID) (*models.Account, error)
-	GetAccountByCard(ctx context.Context, card uint64) (*models.Account, error)
+	GetAccountByCard(ctx context.Context, card int64) (*models.Account, error)
 	UpdateAccount(ctx context.Context, reqUp *models.Account, id uuid.UUID) (*models.Account, error)
 	DeleteAccount(ctx context.Context, id uuid.UUID) error
 	DepositAccount(ctx context.Context, reqDep *models.RequestDeposit) (*models.Account, error)

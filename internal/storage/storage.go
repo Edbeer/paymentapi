@@ -14,7 +14,13 @@ type PostgresStorage struct {
 	db *sql.DB
 }
 
-func NewPostgresStorage() (*PostgresStorage, error) {
+func NewPostgresStorage(db *sql.DB) *PostgresStorage {
+	return &PostgresStorage{
+		db: db,
+	}
+}
+
+func NewPostgresDB() (*sql.DB, error) {
 	connString := "host=paymentdb user=postgres password=postgres dbname=paymentdb sslmode=disable"
 	db, err := sql.Open("postgres", connString)
 	if err != nil {
@@ -25,9 +31,7 @@ func NewPostgresStorage() (*PostgresStorage, error) {
 		return nil, err
 	}
 
-	return &PostgresStorage{
-		db: db,
-	}, err
+	return db, err
 }
 
 func (s *PostgresStorage) CreateAccount(ctx context.Context, account *models.Account) (*models.Account, error) {
@@ -95,12 +99,8 @@ func (s *PostgresStorage) GetAccountByID(ctx context.Context, id uuid.UUID) (*mo
 	query := `SELECT * FROM account 
 			WHERE id = $1`
 	acc := &models.Account{}
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-	if err := tx.QueryRowContext(
+
+	if err := s.db.QueryRowContext(
 		ctx, query, id,
 	).Scan(
 		&acc.ID, &acc.FirstName,
@@ -115,16 +115,10 @@ func (s *PostgresStorage) GetAccountByID(ctx context.Context, id uuid.UUID) (*mo
 	return acc, nil
 }
 
-func (s *PostgresStorage) GetAccountByCard(ctx context.Context, card uint64) (*models.Account, error) {
-	query := `SELECT * FROM account 
-			WHERE card_number = $1`
+func (s *PostgresStorage) GetAccountByCard(ctx context.Context, card int64) (*models.Account, error) {
+	query := `SELECT * FROM account WHERE card_number = $1`
 	acc := &models.Account{}
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-	if err := tx.QueryRowContext(
+	if err := s.db.QueryRowContext(
 		ctx, query, card,
 	).Scan(
 		&acc.ID, &acc.FirstName,
@@ -147,12 +141,8 @@ func (s *PostgresStorage) UpdateAccount(ctx context.Context, reqUp *models.Accou
 				WHERE id = $4
 				RETURNING *`
 	acc := &models.Account{}
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-	if err := tx.QueryRowContext(
+
+	if err := s.db.QueryRowContext(
 		ctx, query,
 		reqUp.FirstName,
 		reqUp.LastName,
@@ -166,9 +156,6 @@ func (s *PostgresStorage) UpdateAccount(ctx context.Context, reqUp *models.Accou
 		&acc.BlockedMoney, pq.Array(&acc.Statement),
 		&acc.CreatedAt,
 	); err != nil {
-		return nil, err
-	}
-	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
 	return acc, nil
@@ -210,7 +197,10 @@ func (s *PostgresStorage) UpdateStatement(ctx context.Context, id, paymentId uui
 func (s *PostgresStorage) DeleteAccount(ctx context.Context, id uuid.UUID) error {
 	query := `DELETE FROM account WHERE id = $1`
 	_, err := s.db.ExecContext(ctx, query, id)
-	return err
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *PostgresStorage) DepositAccount(ctx context.Context, reqDep *models.RequestDeposit) (*models.Account, error) {
@@ -219,12 +209,8 @@ func (s *PostgresStorage) DepositAccount(ctx context.Context, reqDep *models.Req
 				WHERE id = $2 and card_number = $3
 				RETURNING *`
 	acc := &models.Account{}
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-	if err := tx.QueryRowContext(
+
+	if err := s.db.QueryRowContext(
 		ctx,
 		query,
 		reqDep.Balance,
@@ -238,9 +224,6 @@ func (s *PostgresStorage) DepositAccount(ctx context.Context, reqDep *models.Req
 		&acc.BlockedMoney, pq.Array(&acc.Statement),
 		&acc.CreatedAt,
 	); err != nil {
-		return nil, err
-	}
-	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
 	return acc, nil

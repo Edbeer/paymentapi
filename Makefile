@@ -30,3 +30,9 @@ migrate-up:
 
 migrate-down:
 	migrate -path ./migrations -database "postgres://postgres:postgres@localhost:5432/paymentdb?sslmode=disable" down
+
+test:
+	@go test -v ./...
+
+testrace:
+	@go test -v ./... --race

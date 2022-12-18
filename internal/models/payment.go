@@ -16,9 +16,9 @@ type Payment struct {
 	Amount          uint64    `json:"amount"`
 	Status          string    `json:"status"`
 	Currency        string    `json:"currency"`
-	CardNumber      uint64    `json:"card_number"`
-	CardExpiryMonth uint64    `json:"card_expiry_month"`
-	CardExpiryYear  uint64    `json:"card_expiry_year"`
+	CardNumber      int64     `json:"card_number"`
+	CardExpiryMonth uint16    `json:"card_expiry_month"`
+	CardExpiryYear  uint16    `json:"card_expiry_year"`
 	CreatedAt       time.Time `json:"creation_at"`
 }
 
@@ -69,10 +69,10 @@ type PaymentRequest struct {
 	OrderId          string    `json:"order_id"`
 	Amount           uint64    `json:"amount"`
 	Currency         string    `json:"currency"`
-	CardNumber       uint64    `json:"card_number"`
-	CardExpiryMonth  uint64    `json:"card_expiry_month"`
-	CardExpiryYear   uint64    `json:"card_expiry_year"`
-	CardSecurityCode uint64    `json:"card_security_code"`
+	CardNumber       int64     `json:"card_number"`
+	CardExpiryMonth  uint16    `json:"card_expiry_month"`
+	CardExpiryYear   uint16    `json:"card_expiry_year"`
+	CardSecurityCode uint32    `json:"card_security_code"`
 }
 
 // TODO auth code

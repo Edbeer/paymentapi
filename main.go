@@ -16,12 +16,16 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	db, err := storage.NewPostgresStorage()
+	db, err := storage.NewPostgresDB()
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer db.Close()
+	
+	psql := storage.NewPostgresStorage(db)
+
 	log.Println("init server")
-	s := handlers.NewJSONApiServer(":8080", db)
+	s := handlers.NewJSONApiServer(":8080", psql)
 	go func() {
 		s.Run()
 	}()

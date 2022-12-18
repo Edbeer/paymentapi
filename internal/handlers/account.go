@@ -19,7 +19,7 @@ func (s *JSONApiServer) createAccount(w http.ResponseWriter, r *http.Request) er
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
 	defer r.Body.Close()
-	reqAcc := models.NewAccount(req.FirstName, req.LastName)
+	reqAcc := models.NewAccount(req)
 	account, err := s.storage.CreateAccount(r.Context(), reqAcc)
 	if err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
