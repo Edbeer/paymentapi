@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"bytes"
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,6 +11,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	"github.com/Edbeer/paymentapi/pkg/utils"
 )
 
 func Test_CreateAccount(t *testing.T) {
@@ -32,7 +31,7 @@ func Test_CreateAccount(t *testing.T) {
 		CardExpiryYear:   24,
 		CardSecurityCode: 924,
 	}
-	buffer, err := AnyToBytesBuffer(req)
+	buffer, err := utils.AnyToBytesBuffer(req)
 	require.NoError(t, err)
 	require.NotNil(t, buffer)
 	require.Nil(t, err)
@@ -169,7 +168,7 @@ func Test_UpdateAccount(t *testing.T) {
 		FirstName:  "Pavel",
 		CardNumber: 4444444444424323,
 	}
-	buffer, err := AnyToBytesBuffer(reqUp)
+	buffer, err := utils.AnyToBytesBuffer(reqUp)
 	require.NoError(t, err)
 	require.NotNil(t, buffer)
 	require.Nil(t, err)
@@ -232,7 +231,7 @@ func Test_DepositAccount(t *testing.T) {
 		CardNumber: 4444444444424323,
 		Balance: 44,
 	}
-	buffer, err := AnyToBytesBuffer(reqDep)
+	buffer, err := utils.AnyToBytesBuffer(reqDep)
 	require.NoError(t, err)
 	require.NotNil(t, buffer)
 	require.Nil(t, err)
@@ -271,14 +270,4 @@ func Test_DepositAccount(t *testing.T) {
 	err = server.depositAccount(recorder, request)
 	require.NoError(t, err)
 	require.Nil(t, err)
-}
-
-// Convert bytes to buffer helper
-func AnyToBytesBuffer(i interface{}) (*bytes.Buffer, error) {
-	buf := &bytes.Buffer{}
-	err := json.NewEncoder(buf).Encode(i)
-	if err != nil {
-		return buf, err
-	}
-	return buf, nil
 }

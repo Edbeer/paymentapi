@@ -38,8 +38,8 @@ func NewAccount(req *RequestCreate) *Account {
 }
 
 type RequestDeposit struct {
-	CardNumber int64       `json:"card_number"`
-	Balance    uint64    `json:"balance"`
+	CardNumber int64  `json:"card_number"`
+	Balance    uint64 `json:"balance"`
 }
 
 // Request for update account

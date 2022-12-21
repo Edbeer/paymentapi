@@ -8,6 +8,7 @@ import (
 
 	"github.com/Edbeer/paymentapi/internal/models"
 	mockstore "github.com/Edbeer/paymentapi/internal/storage/mock"
+	"github.com/Edbeer/paymentapi/pkg/utils"
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -34,7 +35,7 @@ func Test_CreatePayment(t *testing.T) {
 		CardExpiryYear:   24,
 		CardSecurityCode: 924,
 	}
-	buffer, err := AnyToBytesBuffer(reqPay)
+	buffer, err := utils.AnyToBytesBuffer(reqPay)
 	require.NoError(t, err)
 	require.NotNil(t, buffer)
 	require.Nil(t, err)
@@ -214,7 +215,7 @@ func Test_CapturePayment(t *testing.T) {
 		Amount:    50,
 	}
 
-	buffer, err := AnyToBytesBuffer(reqPaid)
+	buffer, err := utils.AnyToBytesBuffer(reqPaid)
 	require.NoError(t, err)
 	require.NotNil(t, buffer)
 	require.Nil(t, err)
@@ -358,7 +359,7 @@ func Test_RefundPayment(t *testing.T) {
 		Amount:    50,
 	}
 
-	buffer, err := AnyToBytesBuffer(reqPaid)
+	buffer, err := utils.AnyToBytesBuffer(reqPaid)
 	require.NoError(t, err)
 	require.NotNil(t, buffer)
 	require.Nil(t, err)
@@ -501,7 +502,7 @@ func Test_CancelPaymen(t *testing.T) {
 		Amount:    50,
 	}
 
-	buffer, err := AnyToBytesBuffer(reqPaid)
+	buffer, err := utils.AnyToBytesBuffer(reqPaid)
 	require.NoError(t, err)
 	require.NotNil(t, buffer)
 	require.Nil(t, err)
