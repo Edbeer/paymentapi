@@ -19,8 +19,7 @@ func (s *JSONApiServer) createAccount(w http.ResponseWriter, r *http.Request) er
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
 	defer r.Body.Close()
-	reqAcc := models.NewAccount(req)
-	account, err := s.storage.CreateAccount(r.Context(), reqAcc)
+	account, err := s.storage.CreateAccount(r.Context(), req)
 	if err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
@@ -75,7 +74,7 @@ func (s *JSONApiServer) updateAccount(w http.ResponseWriter, r *http.Request) er
 	if err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
-	reqUpd := &models.Account{}
+	reqUpd := &models.RequestUpdate{}
 	if err := json.NewDecoder(r.Body).Decode(reqUpd); err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
@@ -104,7 +103,7 @@ func (s *JSONApiServer) depositAccount(w http.ResponseWriter, r *http.Request) e
 		return WriteJSON(w, http.StatusBadRequest, "account doesn't exist")
 	}
 
-	acc, err := s.storage.GetAccountByID(r.Context(), reqDep.ID)
+	acc, err := s.storage.GetAccountByCard(r.Context(), reqDep.CardNumber)
 	if err != nil {
 		return WriteJSON(w, http.StatusBadRequest, "ccount doesn't exist")
 	}

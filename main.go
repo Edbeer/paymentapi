@@ -10,13 +10,14 @@ import (
 
 	"github.com/Edbeer/paymentapi/internal/handlers"
 	"github.com/Edbeer/paymentapi/internal/storage"
+	"github.com/Edbeer/paymentapi/pkg/db"
 )
 
 func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	db, err := storage.NewPostgresDB()
+	db, err := database.NewPostgresDB()
 	if err != nil {
 		log.Fatal(err)
 	}

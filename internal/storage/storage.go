@@ -1,3 +1,4 @@
+//go:generate mockgen -source storage.go -destination mock/storage_mock.go -package mock
 package storage
 
 import (
@@ -10,6 +11,20 @@ import (
 	_ "github.com/lib/pq"
 )
 
+type Storage interface {
+	CreateAccount(ctx context.Context, req *models.RequestCreate) (*models.Account, error)
+	GetAccount(ctx context.Context) ([]*models.Account, error)
+	GetAccountByID(ctx context.Context, id uuid.UUID) (*models.Account, error)
+	GetAccountByCard(ctx context.Context, card int64) (*models.Account, error)
+	UpdateAccount(ctx context.Context, reqUp *models.RequestUpdate, id uuid.UUID) (*models.Account, error)
+	DeleteAccount(ctx context.Context, id uuid.UUID) error
+	DepositAccount(ctx context.Context, reqDep *models.RequestDeposit) (*models.Account, error)
+	SavePayment(ctx context.Context, payment *models.Payment) (*models.Payment, error)
+	GetPaymentByID(ctx context.Context, id uuid.UUID) (*models.Payment, error)
+	SaveBalance(ctx context.Context, account *models.Account, balance, bmoney uint64) (*models.Account, error)
+	UpdateStatement(ctx context.Context, id, paymentId uuid.UUID) (*models.Account, error)
+}
+
 type PostgresStorage struct {
 	db *sql.DB
 }
@@ -20,41 +35,26 @@ func NewPostgresStorage(db *sql.DB) *PostgresStorage {
 	}
 }
 
-func NewPostgresDB() (*sql.DB, error) {
-	connString := "host=paymentdb user=postgres password=postgres dbname=paymentdb sslmode=disable"
-	db, err := sql.Open("postgres", connString)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := db.Ping(); err != nil {
-		return nil, err
-	}
-
-	return db, err
-}
-
-func (s *PostgresStorage) CreateAccount(ctx context.Context, account *models.Account) (*models.Account, error) {
-	query := `INSERT INTO account (id, first_name, 
+func (s *PostgresStorage) CreateAccount(ctx context.Context, req *models.RequestCreate) (*models.Account, error) {
+	query := `INSERT INTO account (first_name, 
 		last_name, card_number, card_expiry_month, 
 		card_expiry_year, card_security_code, 
 		balance, blocked_money, statement, created_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now())
 			RETURNING *`
+	reqAcc := models.NewAccount(req)
 	acc := &models.Account{}
 	if err := s.db.QueryRowContext(
 		ctx, query,
-		account.ID,
-		account.FirstName,
-		account.LastName,
-		account.CardNumber,
-		account.CardExpiryMonth,
-		account.CardExpiryYear,
-		account.CardSecurityCode,
-		account.Balance,
-		account.BlockedMoney,
-		pq.Array(account.Statement),
-		account.CreatedAt,
+		reqAcc.FirstName,
+		reqAcc.LastName,
+		reqAcc.CardNumber,
+		reqAcc.CardExpiryMonth,
+		reqAcc.CardExpiryYear,
+		reqAcc.CardSecurityCode,
+		reqAcc.Balance,
+		reqAcc.BlockedMoney,
+		pq.Array(reqAcc.Statement),
 	).Scan(
 		&acc.ID, &acc.FirstName,
 		&acc.LastName, &acc.CardNumber,
@@ -133,7 +133,7 @@ func (s *PostgresStorage) GetAccountByCard(ctx context.Context, card int64) (*mo
 	return acc, nil
 }
 
-func (s *PostgresStorage) UpdateAccount(ctx context.Context, reqUp *models.Account, id uuid.UUID) (*models.Account, error) {
+func (s *PostgresStorage) UpdateAccount(ctx context.Context, reqUp *models.RequestUpdate, id uuid.UUID) (*models.Account, error) {
 	query := `UPDATE account
 				SET first_name = COALESCE(NULLIF($1, ''), first_name),
 					last_name = COALESCE(NULLIF($2, ''), last_name),
@@ -206,7 +206,7 @@ func (s *PostgresStorage) DeleteAccount(ctx context.Context, id uuid.UUID) error
 func (s *PostgresStorage) DepositAccount(ctx context.Context, reqDep *models.RequestDeposit) (*models.Account, error) {
 	query := `UPDATE account
 				SET balance = COALESCE(NULLIF($1, 0), balance)
-				WHERE id = $2 and card_number = $3
+				WHERE card_number = $2
 				RETURNING *`
 	acc := &models.Account{}
 
@@ -214,7 +214,6 @@ func (s *PostgresStorage) DepositAccount(ctx context.Context, reqDep *models.Req
 		ctx,
 		query,
 		reqDep.Balance,
-		reqDep.ID,
 		reqDep.CardNumber,
 	).Scan(
 		&acc.ID, &acc.FirstName,

@@ -8,8 +8,8 @@ import (
 	"github.com/google/uuid"
 )
 
-// Created payment: Acceptance of payment
-func (s *JSONApiServer) createdPayment(w http.ResponseWriter, r *http.Request) error {
+// Create payment: Acceptance of payment
+func (s *JSONApiServer) createPayment(w http.ResponseWriter, r *http.Request) error {
 	// read body request
 	reqPay := &models.PaymentRequest{}
 	if err := json.NewDecoder(r.Body).Decode(reqPay); err != nil {
@@ -201,14 +201,13 @@ func (s *JSONApiServer) capturePayment(w http.ResponseWriter, r *http.Request) e
 
 // Refund: Refunded payment, if there is a refund
 func (s *JSONApiServer) refundPayment(w http.ResponseWriter, r *http.Request) error {
+	reqPaid := &models.PaidRequest{}
+	if err := json.NewDecoder(r.Body).Decode(reqPaid); err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
 	// payment id
 	paymentId, err := GetUUID(r)
 	if err != nil {
-		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
-	}
-
-	reqPaid := &models.PaidRequest{}
-	if err := json.NewDecoder(r.Body).Decode(reqPaid); err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
 	// get merchant

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/Edbeer/paymentapi/internal/models"
@@ -68,13 +69,12 @@ func Test_CreateAccount(t *testing.T) {
 			pq.Array(account.Statement),
 			account.CreatedAt,
 		)
-		mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO account (id, first_name, 
+		mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO account (first_name, 
 			last_name, card_number, card_expiry_month, 
 			card_expiry_year, card_security_code, 
 			balance, blocked_money, statement, created_at)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now())
 				RETURNING *`)).WithArgs(
-			account.ID,
 			account.FirstName,
 			account.LastName,
 			account.CardNumber,
@@ -83,9 +83,8 @@ func Test_CreateAccount(t *testing.T) {
 			account.CardSecurityCode,
 			account.Balance,
 			account.BlockedMoney,
-			pq.Array(account.Statement),
-			account.CreatedAt).WillReturnRows(rows)
-		createdUser, err := psql.CreateAccount(context.Background(), account)
+			pq.Array(account.Statement),).WillReturnRows(rows)
+		createdUser, err := psql.CreateAccount(context.Background(), req)
 		require.NoError(t, err)
 		require.NotNil(t, createdUser)
 		require.Equal(t, createdUser, account)
@@ -176,15 +175,11 @@ func Test_UpdateAccount(t *testing.T) {
 	psql := NewPostgresStorage(db)
 
 	t.Run("Update", func(t *testing.T) {
-		req := &models.RequestCreate{
+		req := &models.RequestUpdate{
 			FirstName:        "Pasha1",
 			LastName:         "volkov1",
 			CardNumber:       444444444444444,
-			CardExpiryMonth:  12,
-			CardExpiryYear:   24,
-			CardSecurityCode: 924,
 		}
-		account := models.NewAccount(req)
 
 		colums := []string{
 			"id",
@@ -197,21 +192,28 @@ func Test_UpdateAccount(t *testing.T) {
 			"balance", "blocked_money", "statement",
 			"created_at",
 		}
-
+		req1 := &models.RequestCreate{
+			FirstName:        "Pasha",
+			LastName:         "volkov",
+			CardNumber:       444444444444344,
+			CardExpiryMonth:  12,
+			CardExpiryYear:   24,
+			CardSecurityCode: 924,
+		}
+		account := models.NewAccount(req1)
 		rows2 := sqlmock.NewRows(colums).AddRow(
 			account.ID,
-			"Pasha12",
-			"volkov12",
-			444444444444444,
+			"Pasha1",
+			 "volkov1",
+			 444444444444444,
 			12,
 			24,
 			924,
 			0,
 			0,
 			pq.Array(account.Statement),
-			account.CreatedAt,
+			time.Now(),
 		)
-
 
 		mock.ExpectQuery(regexp.QuoteMeta(`UPDATE account
 		SET first_name = COALESCE(NULLIF($1, ''), first_name),
@@ -219,12 +221,12 @@ func Test_UpdateAccount(t *testing.T) {
 			card_number = COALESCE(NULLIF($3, 0), card_number)
 		WHERE id = $4
 		RETURNING *`)).WithArgs(
-			account.FirstName,
-			account.LastName,
-			account.CardNumber,
+			req.FirstName,
+			req.LastName,
+			req.CardNumber,
 			account.ID).WillReturnRows(rows2)
 
-		updatedUser, err := psql.UpdateAccount(context.Background(), account, account.ID)
+		updatedUser, err := psql.UpdateAccount(context.Background(), req, account.ID)
 		require.NoError(t, err)
 		require.NotEqual(t, updatedUser, account)
 	})
@@ -372,7 +374,6 @@ func Test_DepositAccount(t *testing.T) {
 		account := models.NewAccount(req)
 
 		reqDep := &models.RequestDeposit{
-			ID:         account.ID,
 			CardNumber: 444444444444444,
 			Balance:    50,
 		}
@@ -404,8 +405,8 @@ func Test_DepositAccount(t *testing.T) {
 
 		mock.ExpectQuery(regexp.QuoteMeta(`UPDATE account
 		SET balance = COALESCE(NULLIF($1, 0), balance)
-		WHERE id = $2 and card_number = $3
-		RETURNING *`)).WithArgs(uint64(50), account.ID, account.CardNumber).WillReturnRows(rows)
+		WHERE card_number = $2
+		RETURNING *`)).WithArgs(uint64(50), account.CardNumber).WillReturnRows(rows)
 		acc, err := psql.DepositAccount(context.Background(), reqDep)
 		require.NoError(t, err)
 		require.Equal(t, acc.CardNumber, account.CardNumber)

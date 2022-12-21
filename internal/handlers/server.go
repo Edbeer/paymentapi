@@ -12,11 +12,11 @@ import (
 )
 
 type Storage interface {
-	CreateAccount(ctx context.Context, account *models.Account) (*models.Account, error)
+	CreateAccount(ctx context.Context, req *models.RequestCreate) (*models.Account, error)
 	GetAccount(ctx context.Context) ([]*models.Account, error)
 	GetAccountByID(ctx context.Context, id uuid.UUID) (*models.Account, error)
 	GetAccountByCard(ctx context.Context, card int64) (*models.Account, error)
-	UpdateAccount(ctx context.Context, reqUp *models.Account, id uuid.UUID) (*models.Account, error)
+	UpdateAccount(ctx context.Context, reqUp *models.RequestUpdate, id uuid.UUID) (*models.Account, error)
 	DeleteAccount(ctx context.Context, id uuid.UUID) error
 	DepositAccount(ctx context.Context, reqDep *models.RequestDeposit) (*models.Account, error)
 	SavePayment(ctx context.Context, payment *models.Payment) (*models.Payment, error)
@@ -48,7 +48,7 @@ func (s *JSONApiServer) Run() {
 	postRouter := router.Methods(http.MethodPost).Subrouter()
 	postRouter.HandleFunc("/account", HTTPHandler(s.createAccount))
 	postRouter.HandleFunc("/account/deposit", HTTPHandler(s.depositAccount))
-	postRouter.HandleFunc("/payment/auth", HTTPHandler(s.createdPayment))
+	postRouter.HandleFunc("/payment/auth", HTTPHandler(s.createPayment))
 	postRouter.HandleFunc("/payment/capture/{id}", HTTPHandler(s.capturePayment))
 	postRouter.HandleFunc("/payment/refund/{id}", HTTPHandler(s.refundPayment))
 	postRouter.HandleFunc("/payment/cancel/{id}", HTTPHandler(s.cancelPayment))
