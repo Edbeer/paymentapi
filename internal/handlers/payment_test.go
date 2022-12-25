@@ -12,6 +12,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	"github.com/DATA-DOG/go-sqlmock"
 )
 
 func Test_CreatePayment(t *testing.T) {
@@ -20,9 +21,14 @@ func Test_CreatePayment(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	db, _, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
-	server := NewJSONApiServer("", mockStorage)
+	server := NewJSONApiServer("", db, mockStorage)
 
 	uid := uuid.New()
 	reqPay := &models.PaymentRequest{
@@ -77,20 +83,22 @@ func Test_CreatePayment(t *testing.T) {
 		mockStorage.EXPECT().GetAccountByID(request.Context(), uid).Return(account, nil).AnyTimes()
 		mockStorage.EXPECT().GetAccountByID(request.Context(), mid).Return(merchant, nil).AnyTimes()
 
+		tx, _ := db.BeginTx(request.Context(), nil)
 		account.Balance = account.Balance - reqPay.Amount
 		account.BlockedMoney = account.BlockedMoney + reqPay.Amount
-		mockStorage.EXPECT().SaveBalance(request.Context(), account, account.Balance, account.BlockedMoney).Return(account, nil).AnyTimes()
+		mockStorage.EXPECT().SaveBalance(request.Context(), tx, account, account.Balance, account.BlockedMoney).Return(account, nil).AnyTimes()
 		merchant.BlockedMoney = merchant.BlockedMoney + reqPay.Amount
-		mockStorage.EXPECT().SaveBalance(request.Context(), merchant, merchant.Balance, merchant.BlockedMoney).Return(merchant, nil).AnyTimes()
+		mockStorage.EXPECT().SaveBalance(request.Context(), tx, merchant, merchant.Balance, merchant.BlockedMoney).Return(merchant, nil).AnyTimes()
 
+		
 		payment := models.CreateAuthPayment(reqPay, account, merchant, "Approved")
-		mockStorage.EXPECT().SavePayment(request.Context(), payment).Return(payment, nil).AnyTimes()
+		mockStorage.EXPECT().SavePayment(request.Context(), tx, payment).Return(payment, nil).AnyTimes()
 
 		merchant.Statement = append(merchant.Statement, payment.ID.String())
-		mockStorage.EXPECT().UpdateStatement(request.Context(), mid, payment.ID).Return(merchant, nil).AnyTimes()
+		mockStorage.EXPECT().UpdateStatement(request.Context(), tx, mid, payment.ID).Return(merchant, nil).AnyTimes()
 
 		account.Statement = append(account.Statement, payment.ID.String())
-		mockStorage.EXPECT().UpdateStatement(request.Context(), uid, payment.ID).Return(account, nil).AnyTimes()
+		mockStorage.EXPECT().UpdateStatement(request.Context(), tx, uid, payment.ID).Return(account, nil).AnyTimes()
 
 		err = server.createPayment(recorder, request)
 		require.NoError(t, err)
@@ -136,12 +144,13 @@ func Test_CreatePayment(t *testing.T) {
 		mockStorage.EXPECT().GetAccountByID(request.Context(), uid).Return(account, nil).AnyTimes()
 		mockStorage.EXPECT().GetAccountByID(request.Context(), mid).Return(merchant, nil).AnyTimes()
 		
+		tx, _ := db.BeginTx(request.Context(), nil)
 		payment := models.CreateAuthPayment(reqPay, account, merchant, "wrong payment request")
-		mockStorage.EXPECT().SavePayment(request.Context(), payment).Return(payment, nil).AnyTimes()
+		mockStorage.EXPECT().SavePayment(request.Context(), tx, payment).Return(payment, nil).AnyTimes()
 		
 		merchant.Statement = append(merchant.Statement, payment.ID.String())
-		mockStorage.EXPECT().UpdateStatement(request.Context(), mid, payment.ID).Return(merchant, nil).AnyTimes()
-		
+		mockStorage.EXPECT().UpdateStatement(request.Context(), tx, mid, payment.ID).Return(merchant, nil).AnyTimes()
+
 		err = server.createPayment(recorder, request)
 		require.NoError(t, err)
 		require.Nil(t, err)
@@ -184,11 +193,12 @@ func Test_CreatePayment(t *testing.T) {
 		mockStorage.EXPECT().GetAccountByID(request.Context(), mid).Return(merchant, nil).AnyTimes()
 		require.Less(t, account.Balance, reqPay.Amount)
 
+		tx, _ := db.BeginTx(request.Context(), nil)
 		payment := models.CreateAuthPayment(reqPay, account, merchant, "wrong payment request")
-		mockStorage.EXPECT().SavePayment(request.Context(), payment).Return(payment, nil).AnyTimes()
+		mockStorage.EXPECT().SavePayment(request.Context(), tx, payment).Return(payment, nil).AnyTimes()
 
 		merchant.Statement = append(merchant.Statement, payment.ID.String())
-		mockStorage.EXPECT().UpdateStatement(request.Context(), mid, payment.ID).Return(merchant, nil).AnyTimes()
+		mockStorage.EXPECT().UpdateStatement(request.Context(), tx, mid, payment.ID).Return(merchant, nil).AnyTimes()
 
 		err = server.createPayment(recorder, request)
 		require.NoError(t, err)
@@ -204,9 +214,13 @@ func Test_CapturePayment(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	db, _, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
-	server := NewJSONApiServer("", mockStorage)
+	server := NewJSONApiServer("", db, mockStorage)
 	pid := uuid.New()
 	reqPaid := &models.PaidRequest{
 		OrderId:   "1",
@@ -269,23 +283,24 @@ func Test_CapturePayment(t *testing.T) {
 		mockStorage.EXPECT().GetAccountByID(request.Context(), mid).Return(merchant, nil).AnyTimes()
 		mockStorage.EXPECT().GetPaymentByID(request.Context(), pid).Return(refPayment, nil).AnyTimes()
 
+		tx, _ := db.BeginTx(request.Context(), nil)
 		refPayment.Amount = refPayment.Amount - reqPaid.Amount
-		mockStorage.EXPECT().SavePayment(request.Context(), refPayment).Return(refPayment, nil).AnyTimes()
+		mockStorage.EXPECT().SavePayment(request.Context(), tx, refPayment).Return(refPayment, nil).AnyTimes()
 
 		completedPayment := models.CreateCompletePayment(reqPaid, refPayment, "Successful payment")
-		mockStorage.EXPECT().SavePayment(request.Context(), completedPayment).Return(completedPayment, nil).AnyTimes()
+		mockStorage.EXPECT().SavePayment(request.Context(), tx, completedPayment).Return(completedPayment, nil).AnyTimes()
 
 		mockStorage.EXPECT().GetAccountByCard(request.Context(), refPayment.CardNumber).Return(account, nil).AnyTimes()
 		account.BlockedMoney = account.BlockedMoney - reqPaid.Amount
-		mockStorage.EXPECT().SaveBalance(request.Context(), account, account.Balance, account.BlockedMoney).Return(account, nil).AnyTimes()
+		mockStorage.EXPECT().SaveBalance(request.Context(), tx, account, account.Balance, account.BlockedMoney).Return(account, nil).AnyTimes()
 		account.Statement = append(account.Statement, completedPayment.ID.String())
-		mockStorage.EXPECT().UpdateStatement(request.Context(), uid, completedPayment.ID).Return(account, nil).AnyTimes()
+		mockStorage.EXPECT().UpdateStatement(request.Context(), tx, uid, completedPayment.ID).Return(account, nil).AnyTimes()
 
 		merchant.Balance = merchant.Balance + reqPaid.Amount
 		merchant.BlockedMoney = merchant.BlockedMoney - reqPaid.Amount
-		mockStorage.EXPECT().SaveBalance(request.Context(), merchant, merchant.Balance, merchant.BlockedMoney).Return(merchant, nil).AnyTimes()
+		mockStorage.EXPECT().SaveBalance(request.Context(), tx, merchant, merchant.Balance, merchant.BlockedMoney).Return(merchant, nil).AnyTimes()
 		merchant.Statement = append(merchant.Statement, completedPayment.ID.String())
-		mockStorage.EXPECT().UpdateStatement(request.Context(), mid, completedPayment.ID).Return(merchant, nil).AnyTimes()
+		mockStorage.EXPECT().UpdateStatement(request.Context(), tx, mid, completedPayment.ID).Return(merchant, nil).AnyTimes()
 
 		err := server.capturePayment(recorder, request)
 		require.NoError(t, err)
@@ -328,11 +343,12 @@ func Test_CapturePayment(t *testing.T) {
 		mockStorage.EXPECT().GetAccountByID(request.Context(), mid).Return(merchant, nil).AnyTimes()
 		mockStorage.EXPECT().GetPaymentByID(request.Context(), pid).Return(refPayment, nil).AnyTimes()
 
+		tx, _ := db.BeginTx(request.Context(), nil)
 		invalidPayment := models.CreateCompletePayment(reqPaid, refPayment, "Invalid amount")
-		mockStorage.EXPECT().SavePayment(request.Context(), invalidPayment).Return(invalidPayment, nil).AnyTimes()
+		mockStorage.EXPECT().SavePayment(request.Context(), tx, invalidPayment).Return(invalidPayment, nil).AnyTimes()
 
 		merchant.Statement = append(merchant.Statement, invalidPayment.ID.String())
-		mockStorage.EXPECT().UpdateStatement(request.Context(), mid, invalidPayment.ID).Return(merchant, nil).AnyTimes()
+		mockStorage.EXPECT().UpdateStatement(request.Context(), tx, mid, invalidPayment.ID).Return(merchant, nil).AnyTimes()
 
 		err := server.capturePayment(recorder, request)
 		require.NoError(t, err)
@@ -348,9 +364,13 @@ func Test_RefundPayment(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	db, _, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
-	server := NewJSONApiServer("", mockStorage)
+	server := NewJSONApiServer("", db, mockStorage)
 	pid := uuid.New()
 	reqPaid := &models.PaidRequest{
 		OrderId:   "1",
@@ -414,22 +434,23 @@ func Test_RefundPayment(t *testing.T) {
 		mockStorage.EXPECT().GetAccountByID(request.Context(), mid).Return(merchant, nil).AnyTimes()
 		mockStorage.EXPECT().GetPaymentByID(request.Context(), pid).Return(refPayment, nil).AnyTimes()
 
+		tx, _ := db.BeginTx(request.Context(), nil)
 		refPayment.Amount = refPayment.Amount - reqPaid.Amount
-		mockStorage.EXPECT().SavePayment(request.Context(), refPayment).Return(refPayment, nil).AnyTimes()
+		mockStorage.EXPECT().SavePayment(request.Context(), tx, refPayment).Return(refPayment, nil).AnyTimes()
 
 		completedPayment := models.CreateCompletePayment(reqPaid, refPayment, "Successful refund")
-		mockStorage.EXPECT().SavePayment(request.Context(), completedPayment).Return(completedPayment, nil).AnyTimes()
+		mockStorage.EXPECT().SavePayment(request.Context(), tx, completedPayment).Return(completedPayment, nil).AnyTimes()
 
 		mockStorage.EXPECT().GetAccountByCard(request.Context(), refPayment.CardNumber).Return(account, nil).AnyTimes()
 		account.Balance = account.Balance + reqPaid.Amount
-		mockStorage.EXPECT().SaveBalance(request.Context(), account, account.Balance, account.BlockedMoney).Return(account, nil).AnyTimes()
+		mockStorage.EXPECT().SaveBalance(request.Context(), tx, account, account.Balance, account.BlockedMoney).Return(account, nil).AnyTimes()
 		account.Statement = append(account.Statement, completedPayment.ID.String())
-		mockStorage.EXPECT().UpdateStatement(request.Context(), uid, completedPayment.ID).Return(account, nil).AnyTimes()
+		mockStorage.EXPECT().UpdateStatement(request.Context(), tx, uid, completedPayment.ID).Return(account, nil).AnyTimes()
 
 		merchant.Balance = merchant.Balance - reqPaid.Amount
-		mockStorage.EXPECT().SaveBalance(request.Context(), merchant, merchant.Balance, merchant.BlockedMoney).Return(merchant, nil).AnyTimes()
+		mockStorage.EXPECT().SaveBalance(request.Context(), tx, merchant, merchant.Balance, merchant.BlockedMoney).Return(merchant, nil).AnyTimes()
 		merchant.Statement = append(merchant.Statement, completedPayment.ID.String())
-		mockStorage.EXPECT().UpdateStatement(request.Context(), mid, completedPayment.ID).Return(merchant, nil).AnyTimes()
+		mockStorage.EXPECT().UpdateStatement(request.Context(), tx, mid, completedPayment.ID).Return(merchant, nil).AnyTimes()
 
 		err := server.refundPayment(recorder, request)
 		require.NoError(t, err)
@@ -471,11 +492,12 @@ func Test_RefundPayment(t *testing.T) {
 		mockStorage.EXPECT().GetAccountByID(request.Context(), mid).Return(merchant, nil).AnyTimes()
 		mockStorage.EXPECT().GetPaymentByID(request.Context(), pid).Return(refPayment, nil).AnyTimes()
 
+		tx, _ := db.BeginTx(request.Context(), nil)
 		invalidPayment := models.CreateCompletePayment(reqPaid, refPayment, "Invalid amount")
-		mockStorage.EXPECT().SavePayment(request.Context(), invalidPayment).Return(invalidPayment, nil).AnyTimes()
+		mockStorage.EXPECT().SavePayment(request.Context(), tx, invalidPayment).Return(invalidPayment, nil).AnyTimes()
 
 		merchant.Statement = append(merchant.Statement, invalidPayment.ID.String())
-		mockStorage.EXPECT().UpdateStatement(request.Context(), mid, invalidPayment.ID).Return(merchant, nil).AnyTimes()
+		mockStorage.EXPECT().UpdateStatement(request.Context(), tx, mid, invalidPayment.ID).Return(merchant, nil).AnyTimes()
 
 		err := server.refundPayment(recorder, request)
 		require.NoError(t, err)
@@ -491,9 +513,13 @@ func Test_CancelPaymen(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	db, _, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
-	server := NewJSONApiServer("", mockStorage)
+	server := NewJSONApiServer("", db, mockStorage)
 	pid := uuid.New()
 	reqPaid := &models.PaidRequest{
 		OrderId:   "1",
@@ -553,26 +579,27 @@ func Test_CancelPaymen(t *testing.T) {
 			CreatedAt:        time.Now(),
 		}
 
+		tx, _ := db.BeginTx(request.Context(), nil)
 		mockStorage.EXPECT().GetAccountByID(request.Context(), mid).Return(merchant, nil).AnyTimes()
 		mockStorage.EXPECT().GetPaymentByID(request.Context(), pid).Return(refPayment, nil).AnyTimes()
 
 		refPayment.Amount = refPayment.Amount - reqPaid.Amount
-		mockStorage.EXPECT().SavePayment(request.Context(), refPayment).Return(refPayment, nil).AnyTimes()
+		mockStorage.EXPECT().SavePayment(request.Context(), tx, refPayment).Return(refPayment, nil).AnyTimes()
 
 		completedPayment := models.CreateCompletePayment(reqPaid, refPayment, "Successful cancel")
-		mockStorage.EXPECT().SavePayment(request.Context(), completedPayment).Return(completedPayment, nil).AnyTimes()
+		mockStorage.EXPECT().SavePayment(request.Context(), tx, completedPayment).Return(completedPayment, nil).AnyTimes()
 		
 		mockStorage.EXPECT().GetAccountByCard(request.Context(), refPayment.CardNumber).Return(account, nil).AnyTimes()
 		account.Balance = account.Balance + reqPaid.Amount
 		account.BlockedMoney = account.BlockedMoney - reqPaid.Amount
-		mockStorage.EXPECT().SaveBalance(request.Context(), account, account.Balance, account.BlockedMoney).Return(account, nil).AnyTimes()
+		mockStorage.EXPECT().SaveBalance(request.Context(), tx, account, account.Balance, account.BlockedMoney).Return(account, nil).AnyTimes()
 		account.Statement = append(account.Statement, completedPayment.ID.String())
-		mockStorage.EXPECT().UpdateStatement(request.Context(), uid, completedPayment.ID).Return(account, nil).AnyTimes()
+		mockStorage.EXPECT().UpdateStatement(request.Context(), tx, uid, completedPayment.ID).Return(account, nil).AnyTimes()
 
 		merchant.BlockedMoney = merchant.BlockedMoney - reqPaid.Amount
-		mockStorage.EXPECT().SaveBalance(request.Context(), merchant, merchant.Balance, merchant.BlockedMoney).Return(account, nil).AnyTimes()
+		mockStorage.EXPECT().SaveBalance(request.Context(), tx, merchant, merchant.Balance, merchant.BlockedMoney).Return(account, nil).AnyTimes()
 		merchant.Statement = append(merchant.Statement, completedPayment.ID.String())
-		mockStorage.EXPECT().UpdateStatement(request.Context(), mid, completedPayment.ID).Return(merchant, nil).AnyTimes()
+		mockStorage.EXPECT().UpdateStatement(request.Context(), tx, mid, completedPayment.ID).Return(merchant, nil).AnyTimes()
 
 		err := server.cancelPayment(recorder, request)
 		require.NoError(t, err)
@@ -614,11 +641,12 @@ func Test_CancelPaymen(t *testing.T) {
 		mockStorage.EXPECT().GetAccountByID(request.Context(), mid).Return(merchant, nil).AnyTimes()
 		mockStorage.EXPECT().GetPaymentByID(request.Context(), pid).Return(refPayment, nil).AnyTimes()
 
+		tx, _ := db.BeginTx(request.Context(), nil)
 		invalidPayment := models.CreateCompletePayment(reqPaid, refPayment, "Invalid amount")
-		mockStorage.EXPECT().SavePayment(request.Context(), invalidPayment).Return(invalidPayment, nil).AnyTimes()
+		mockStorage.EXPECT().SavePayment(request.Context(), tx, invalidPayment).Return(invalidPayment, nil).AnyTimes()
 
 		merchant.Statement = append(merchant.Statement, invalidPayment.ID.String())
-		mockStorage.EXPECT().UpdateStatement(request.Context(), mid, invalidPayment.ID).Return(merchant, nil).AnyTimes()
+		mockStorage.EXPECT().UpdateStatement(request.Context(), tx, mid, invalidPayment.ID).Return(merchant, nil).AnyTimes()
 
 		err := server.refundPayment(recorder, request)
 		require.NoError(t, err)

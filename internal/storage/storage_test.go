@@ -500,9 +500,9 @@ func Test_SavePayment(t *testing.T) {
 					payment.CardExpiryMonth,
 					payment.CardExpiryYear,
 					payment.CreatedAt,).WillReturnRows(rows)
-		mock.ExpectCommit()
 
-		pay, err := psql.SavePayment(context.Background(), payment)
+		tx, _ := db.BeginTx(context.Background(), nil)
+		pay, err := psql.SavePayment(context.Background(), tx, payment)
 		require.NoError(t, err)
 		require.NotNil(t, pay)
 	})
@@ -559,8 +559,9 @@ func Test_SaveBalance(t *testing.T) {
 			blocked_money = COALESCE(NULLIF($2, 0), blocked_money)
 		WHERE id = $3
 		RETURNING *`)).WithArgs(50, 50, account.ID).WillReturnRows(rows)
-		mock.ExpectCommit()
-		acc, err := psql.SaveBalance(context.Background(), account, 50, 50)
+		
+		tx, _ := db.BeginTx(context.Background(), nil)
+		acc, err := psql.SaveBalance(context.Background(), tx, account, 50, 50)
 		require.NoError(t, err)
 		require.NotNil(t, acc)
 	})
@@ -635,9 +636,8 @@ func Test_GetPaymentByID(t *testing.T) {
 			payment.CreatedAt,
 		)
 
-		mock.ExpectBegin()
 		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM payment WHERE id = $1`)).WithArgs(payment.ID).WillReturnRows(rows)
-		mock.ExpectCommit()
+
 		pay, err := psql.GetPaymentByID(context.Background(), payment.ID)
 		require.NoError(t, err)
 		require.NotNil(t, pay)

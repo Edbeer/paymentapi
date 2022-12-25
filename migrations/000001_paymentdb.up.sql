@@ -5,7 +5,7 @@ CREATE EXTENSION IF NOT EXISTS CITEXT;
 
 CREATE TABLE IF NOT EXISTS account 
 (
-	id UUID PRIMARY KEY,
+	id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
 	first_name VARCHAR(50),
 	last_name VARCHAR(50),
 	card_number BIGINT,

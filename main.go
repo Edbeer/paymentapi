@@ -26,7 +26,7 @@ func main() {
 	psql := storage.NewPostgresStorage(db)
 
 	log.Println("init server")
-	s := handlers.NewJSONApiServer(":8080", psql)
+	s := handlers.NewJSONApiServer(":8080", db, psql)
 	go func() {
 		s.Run()
 	}()
