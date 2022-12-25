@@ -6,6 +6,7 @@ package mock
 
 import (
 	context "context"
+	sql "database/sql"
 	reflect "reflect"
 
 	models "github.com/Edbeer/paymentapi/internal/models"
@@ -141,33 +142,33 @@ func (mr *MockStorageMockRecorder) GetPaymentByID(ctx, id interface{}) *gomock.C
 }
 
 // SaveBalance mocks base method.
-func (m *MockStorage) SaveBalance(ctx context.Context, account *models.Account, balance, bmoney uint64) (*models.Account, error) {
+func (m *MockStorage) SaveBalance(ctx context.Context, tx *sql.Tx, account *models.Account, balance, bmoney uint64) (*models.Account, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SaveBalance", ctx, account, balance, bmoney)
+	ret := m.ctrl.Call(m, "SaveBalance", ctx, tx, account, balance, bmoney)
 	ret0, _ := ret[0].(*models.Account)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // SaveBalance indicates an expected call of SaveBalance.
-func (mr *MockStorageMockRecorder) SaveBalance(ctx, account, balance, bmoney interface{}) *gomock.Call {
+func (mr *MockStorageMockRecorder) SaveBalance(ctx, tx, account, balance, bmoney interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveBalance", reflect.TypeOf((*MockStorage)(nil).SaveBalance), ctx, account, balance, bmoney)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveBalance", reflect.TypeOf((*MockStorage)(nil).SaveBalance), ctx, tx, account, balance, bmoney)
 }
 
 // SavePayment mocks base method.
-func (m *MockStorage) SavePayment(ctx context.Context, payment *models.Payment) (*models.Payment, error) {
+func (m *MockStorage) SavePayment(ctx context.Context, tx *sql.Tx, payment *models.Payment) (*models.Payment, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SavePayment", ctx, payment)
+	ret := m.ctrl.Call(m, "SavePayment", ctx, tx, payment)
 	ret0, _ := ret[0].(*models.Payment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // SavePayment indicates an expected call of SavePayment.
-func (mr *MockStorageMockRecorder) SavePayment(ctx, payment interface{}) *gomock.Call {
+func (mr *MockStorageMockRecorder) SavePayment(ctx, tx, payment interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SavePayment", reflect.TypeOf((*MockStorage)(nil).SavePayment), ctx, payment)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SavePayment", reflect.TypeOf((*MockStorage)(nil).SavePayment), ctx, tx, payment)
 }
 
 // UpdateAccount mocks base method.
@@ -186,16 +187,16 @@ func (mr *MockStorageMockRecorder) UpdateAccount(ctx, reqUp, id interface{}) *go
 }
 
 // UpdateStatement mocks base method.
-func (m *MockStorage) UpdateStatement(ctx context.Context, id, paymentId uuid.UUID) (*models.Account, error) {
+func (m *MockStorage) UpdateStatement(ctx context.Context, tx *sql.Tx, id, paymentId uuid.UUID) (*models.Account, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateStatement", ctx, id, paymentId)
+	ret := m.ctrl.Call(m, "UpdateStatement", ctx, tx, id, paymentId)
 	ret0, _ := ret[0].(*models.Account)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // UpdateStatement indicates an expected call of UpdateStatement.
-func (mr *MockStorageMockRecorder) UpdateStatement(ctx, id, paymentId interface{}) *gomock.Call {
+func (mr *MockStorageMockRecorder) UpdateStatement(ctx, tx, id, paymentId interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStatement", reflect.TypeOf((*MockStorage)(nil).UpdateStatement), ctx, id, paymentId)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStatement", reflect.TypeOf((*MockStorage)(nil).UpdateStatement), ctx, tx, id, paymentId)
 }

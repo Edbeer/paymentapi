@@ -6,12 +6,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/Edbeer/paymentapi/internal/models"
 	mockstore "github.com/Edbeer/paymentapi/internal/storage/mock"
+	"github.com/Edbeer/paymentapi/pkg/utils"
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
-	"github.com/Edbeer/paymentapi/pkg/utils"
 )
 
 func Test_CreateAccount(t *testing.T) {
@@ -20,9 +21,13 @@ func Test_CreateAccount(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	db, _, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
-	server := NewJSONApiServer("", mockStorage)
+	server := NewJSONApiServer("", db, mockStorage)
 	req := &models.RequestCreate{
 		FirstName:        "Pasha1",
 		LastName:         "volkov1",
@@ -57,6 +62,7 @@ func Test_CreateAccount(t *testing.T) {
 	err = server.createAccount(recorder, request)
 	require.NoError(t, err)
 	require.Nil(t, err)
+	require.NotNil(t, reqAcc.ID)
 }
 
 func Test_GetAccount(t *testing.T) {
@@ -65,9 +71,13 @@ func Test_GetAccount(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	db, _, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
-	server := NewJSONApiServer("", mockStorage)
+	server := NewJSONApiServer("", db, mockStorage)
 
 	request := httptest.NewRequest(http.MethodGet, "/account", nil)
 	recorder := httptest.NewRecorder()
@@ -116,7 +126,7 @@ func Test_GetAccount(t *testing.T) {
 
 	mockStorage.EXPECT().GetAccount(request.Context()).Return(accounts, nil).AnyTimes()
 
-	err := server.getAccount(recorder, request)
+	err = server.getAccount(recorder, request)
 	require.NoError(t, err)
 	require.Nil(t, err)
 }
@@ -127,9 +137,13 @@ func Test_GetAccountByID(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	db, _, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
-	server := NewJSONApiServer("", mockStorage)
+	server := NewJSONApiServer("", db, mockStorage)
 	request := httptest.NewRequest(http.MethodGet, "/accounе/{id}", nil)
 	recorder := httptest.NewRecorder()
 	uid := uuid.New()
@@ -150,7 +164,7 @@ func Test_GetAccountByID(t *testing.T) {
 
 	mockStorage.EXPECT().GetAccountByID(request.Context(), uid).Return(account, nil).AnyTimes()
 
-	err := server.getAccountByID(recorder, request)
+	err = server.getAccountByID(recorder, request)
 	require.NoError(t, err)
 	require.Nil(t, err)
 }
@@ -161,9 +175,13 @@ func Test_UpdateAccount(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	db, _, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
-	server := NewJSONApiServer("", mockStorage)
+	server := NewJSONApiServer("", db, mockStorage)
 	reqUp := &models.RequestUpdate{
 		FirstName:  "Pavel",
 		CardNumber: 4444444444424323,
@@ -202,9 +220,13 @@ func Test_DeleteAccount(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	db, _, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+	
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
-	server := NewJSONApiServer("", mockStorage)
+	server := NewJSONApiServer("", db, mockStorage)
 
 	request := httptest.NewRequest(http.MethodDelete, "/account/{id}", nil)
 	recorder := httptest.NewRecorder()
@@ -213,7 +235,7 @@ func Test_DeleteAccount(t *testing.T) {
 
 	mockStorage.EXPECT().DeleteAccount(request.Context(), uid).Return(nil).AnyTimes()
 
-	err := server.deleteAccount(recorder, request)
+	err = server.deleteAccount(recorder, request)
 	require.NoError(t, err)
 	require.Nil(t, err)
 }
@@ -224,9 +246,14 @@ func Test_DepositAccount(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	db, _, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
-	server := NewJSONApiServer("", mockStorage)
+	server := NewJSONApiServer("", db, mockStorage)
 	reqDep := &models.RequestDeposit{
 		CardNumber: 4444444444424323,
 		Balance: 44,

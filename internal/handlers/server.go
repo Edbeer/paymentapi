@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -19,19 +20,21 @@ type Storage interface {
 	UpdateAccount(ctx context.Context, reqUp *models.RequestUpdate, id uuid.UUID) (*models.Account, error)
 	DeleteAccount(ctx context.Context, id uuid.UUID) error
 	DepositAccount(ctx context.Context, reqDep *models.RequestDeposit) (*models.Account, error)
-	SavePayment(ctx context.Context, payment *models.Payment) (*models.Payment, error)
+	SavePayment(ctx context.Context, tx *sql.Tx, payment *models.Payment) (*models.Payment, error)
 	GetPaymentByID(ctx context.Context, id uuid.UUID) (*models.Payment, error)
-	SaveBalance(ctx context.Context, account *models.Account, balance, bmoney uint64) (*models.Account, error)
-	UpdateStatement(ctx context.Context, id, paymentId uuid.UUID) (*models.Account, error)
+	SaveBalance(ctx context.Context, tx *sql.Tx, account *models.Account, balance, bmoney uint64) (*models.Account, error)
+	UpdateStatement(ctx context.Context, tx *sql.Tx, id, paymentId uuid.UUID) (*models.Account, error)
 }
 
 type JSONApiServer struct {
 	storage Storage
 	Server  *http.Server
+	db *sql.DB
 }
 
-func NewJSONApiServer(listenAddr string, storage Storage) *JSONApiServer {
+func NewJSONApiServer(listenAddr string, db *sql.DB, storage Storage) *JSONApiServer {
 	return &JSONApiServer{
+		db: db,
 		storage: storage,
 		Server: &http.Server{
 			Addr:         listenAddr,
