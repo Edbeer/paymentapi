@@ -15,6 +15,7 @@ func (s *JSONApiServer) createPayment(w http.ResponseWriter, r *http.Request) er
 	if err := json.NewDecoder(r.Body).Decode(reqPay); err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
+	defer r.Body.Close()
 	// merchant account
 	id, err := getMerchantID(r)
 	if err != nil {
@@ -142,6 +143,7 @@ func (s *JSONApiServer) capturePayment(w http.ResponseWriter, r *http.Request) e
 	if err := json.NewDecoder(r.Body).Decode(reqPaid); err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
+	defer r.Body.Close()
 	paymentId, err := GetUUID(r)
 	if err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
@@ -255,6 +257,7 @@ func (s *JSONApiServer) refundPayment(w http.ResponseWriter, r *http.Request) er
 	if err := json.NewDecoder(r.Body).Decode(reqPaid); err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
+	defer r.Body.Close()
 	// payment id
 	paymentId, err := GetUUID(r)
 	if err != nil {
@@ -374,6 +377,7 @@ func (s *JSONApiServer) cancelPayment(w http.ResponseWriter, r *http.Request) er
 	if err := json.NewDecoder(r.Body).Decode(reqPaid); err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
+	defer r.Body.Close()
 	// get merchant
 	merchantId, err := getMerchantID(r)
 	if err != nil {
