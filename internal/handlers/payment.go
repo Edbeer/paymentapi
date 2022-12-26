@@ -35,6 +35,7 @@ func (s *JSONApiServer) createPayment(w http.ResponseWriter, r *http.Request) er
 	reqPay.CardExpiryMonth != personalAccount.CardExpiryMonth ||
 	reqPay.CardExpiryYear != personalAccount.CardExpiryYear ||
 	reqPay.CardSecurityCode	!= personalAccount.CardSecurityCode {
+		// Begin Transaction
 		tx, err := s.db.BeginTx(r.Context(), nil)
 		defer tx.Rollback()
 		if err != nil {
@@ -50,6 +51,7 @@ func (s *JSONApiServer) createPayment(w http.ResponseWriter, r *http.Request) er
 		if err != nil {
 			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 		}
+		// Commit transaction
 		if err := tx.Commit(); err != nil {
 			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: "wrong transaction"})
 		} 
@@ -61,6 +63,7 @@ func (s *JSONApiServer) createPayment(w http.ResponseWriter, r *http.Request) er
 	// consume user balance
 	// balance < req amount
 	if personalAccount.Balance < reqPay.Amount {
+		// Begin Transaction
 		tx, err := s.db.BeginTx(r.Context(), nil)
 		defer tx.Rollback()
 		if err != nil {
@@ -76,6 +79,7 @@ func (s *JSONApiServer) createPayment(w http.ResponseWriter, r *http.Request) er
 		if err != nil {
 			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 		}
+		// Commit transaction
 		if err := tx.Commit(); err != nil {
 			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: "wrong transaction"})
 		} 
@@ -187,6 +191,7 @@ func (s *JSONApiServer) capturePayment(w http.ResponseWriter, r *http.Request) e
 			})
 		}
 		// Successful payment
+		// Begin Transaction
 		tx, err := s.db.BeginTx(r.Context(), nil)
 		defer tx.Rollback()
 		if err != nil {
@@ -229,6 +234,7 @@ func (s *JSONApiServer) capturePayment(w http.ResponseWriter, r *http.Request) e
 		if err != nil {
 			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 		}
+		// Commit transaction
 		if err := tx.Commit(); err != nil {
 			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: "wrong transaction"})
 		} 
@@ -273,6 +279,7 @@ func (s *JSONApiServer) refundPayment(w http.ResponseWriter, r *http.Request) er
 	if referncedPayment.Operation == "Capture" && referncedPayment.Status == "Successful payment" {
 		// Invalid amount
 		if referncedPayment.Amount < reqPaid.Amount {
+			// Begin Transaction
 			tx, err := s.db.BeginTx(r.Context(), nil)
 			defer tx.Rollback()
 			if err != nil {
@@ -288,6 +295,7 @@ func (s *JSONApiServer) refundPayment(w http.ResponseWriter, r *http.Request) er
 			if err != nil {
 				return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 			}
+			// Commit transaction
 			if err := tx.Commit(); err != nil {
 				return WriteJSON(w, http.StatusBadRequest, ApiError{Error: "wrong transaction"})
 			} 
@@ -297,6 +305,7 @@ func (s *JSONApiServer) refundPayment(w http.ResponseWriter, r *http.Request) er
 			})
 		}
 		// Successful refund
+		// Begin transaction
 		tx, err := s.db.BeginTx(r.Context(), nil)
 		defer tx.Rollback()
 		if err != nil {
@@ -338,6 +347,7 @@ func (s *JSONApiServer) refundPayment(w http.ResponseWriter, r *http.Request) er
 		if err != nil {
 			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 		}
+		// Commit transaction
 		if err := tx.Commit(); err != nil {
 			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: "wrong transaction"})
 		} 
@@ -359,7 +369,7 @@ func (s *JSONApiServer) cancelPayment(w http.ResponseWriter, r *http.Request) er
 	if err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
-
+	// paid request
 	reqPaid := &models.PaidRequest{}
 	if err := json.NewDecoder(r.Body).Decode(reqPaid); err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
@@ -383,6 +393,7 @@ func (s *JSONApiServer) cancelPayment(w http.ResponseWriter, r *http.Request) er
 	if referncedPayment.Operation == "Authorization" && referncedPayment.Status == "Approved" {
 		// Invalid amount
 		if referncedPayment.Amount < reqPaid.Amount {
+			// Begin transaction
 			tx, err := s.db.BeginTx(r.Context(), nil)
 			defer tx.Rollback()
 			if err != nil {
@@ -398,6 +409,7 @@ func (s *JSONApiServer) cancelPayment(w http.ResponseWriter, r *http.Request) er
 			if err != nil {
 				return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 			}
+			// Commit transaction
 			if err := tx.Commit(); err != nil {
 				return WriteJSON(w, http.StatusBadRequest, ApiError{Error: "wrong transaction"})
 			} 
@@ -407,6 +419,7 @@ func (s *JSONApiServer) cancelPayment(w http.ResponseWriter, r *http.Request) er
 			})
 		}
 		// Successful refund
+		// Begin transaction
 		tx, err := s.db.BeginTx(r.Context(), nil)
 		defer tx.Rollback()
 		if err != nil {
@@ -449,6 +462,7 @@ func (s *JSONApiServer) cancelPayment(w http.ResponseWriter, r *http.Request) er
 		if err != nil {
 			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 		}
+		// Commit transaction
 		if err := tx.Commit(); err != nil {
 			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: "wrong transaction"})
 		} 
