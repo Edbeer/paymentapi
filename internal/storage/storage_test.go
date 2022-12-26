@@ -38,10 +38,10 @@ func Test_CreateAccount(t *testing.T) {
 		req := &models.RequestCreate{
 			FirstName:        "Pasha1",
 			LastName:         "volkov1",
-			CardNumber:       444444444444444,
-			CardExpiryMonth:  12,
-			CardExpiryYear:   24,
-			CardSecurityCode: 924,
+			CardNumber:       "444444444444444",
+			CardExpiryMonth:  "12",
+			CardExpiryYear:   "24",
+			CardSecurityCode: "924",
 		}
 		account := models.NewAccount(req)
 
@@ -60,10 +60,10 @@ func Test_CreateAccount(t *testing.T) {
 			account.ID,
 			"Pasha1",
 			"volkov1",
-			444444444444444,
-			12,
-			24,
-			924,
+			"444444444444444",
+			"12",
+			"24",
+			"924",
 			0,
 			0,
 			pq.Array(account.Statement),
@@ -104,10 +104,10 @@ func Test_GetAccount(t *testing.T) {
 		req1 := &models.RequestCreate{
 			FirstName:        "Pasha1",
 			LastName:         "volkov1",
-			CardNumber:       444444444444444,
-			CardExpiryMonth:  12,
-			CardExpiryYear:   24,
-			CardSecurityCode: 924,
+			CardNumber:       "444444444444444",
+			CardExpiryMonth:  "12",
+			CardExpiryYear:   "24",
+			CardSecurityCode: "924",
 		}
 		account1 := models.NewAccount(req1)
 		colums := []string{
@@ -125,10 +125,10 @@ func Test_GetAccount(t *testing.T) {
 			account1.ID,
 			"Pasha1",
 			"volkov1",
-			444444444444444,
-			12,
-			24,
-			924,
+			"444444444444444",
+			"12",
+			"24",
+			"924",
 			0,
 			0,
 			pq.Array(account1.Statement),
@@ -137,10 +137,10 @@ func Test_GetAccount(t *testing.T) {
 		req2 := &models.RequestCreate{
 			FirstName:        "Pasha",
 			LastName:         "volkov",
-			CardNumber:       444444444444432,
-			CardExpiryMonth:  10,
-			CardExpiryYear:   25,
-			CardSecurityCode: 934,
+			CardNumber:       "444444444444432",
+			CardExpiryMonth:  "10",
+			CardExpiryYear:   "25",
+			CardSecurityCode: "934",
 		}
 		account2 := models.NewAccount(req2)
 
@@ -148,10 +148,10 @@ func Test_GetAccount(t *testing.T) {
 			account2.ID,
 			"Pasha1",
 			"volkov1",
-			444444444444444,
-			12,
-			24,
-			924,
+			"444444444444444",
+			"12",
+			"24",
+			"924",
 			0,
 			0,
 			pq.Array(account2.Statement),
@@ -178,7 +178,7 @@ func Test_UpdateAccount(t *testing.T) {
 		req := &models.RequestUpdate{
 			FirstName:        "Pasha1",
 			LastName:         "volkov1",
-			CardNumber:       444444444444444,
+			CardNumber:       "444444444444444",
 		}
 
 		colums := []string{
@@ -195,20 +195,20 @@ func Test_UpdateAccount(t *testing.T) {
 		req1 := &models.RequestCreate{
 			FirstName:        "Pasha",
 			LastName:         "volkov",
-			CardNumber:       444444444444344,
-			CardExpiryMonth:  12,
-			CardExpiryYear:   24,
-			CardSecurityCode: 924,
+			CardNumber:       "444444444444344",
+			CardExpiryMonth:  "12",
+			CardExpiryYear:   "24",
+			CardSecurityCode: "924",
 		}
 		account := models.NewAccount(req1)
 		rows2 := sqlmock.NewRows(colums).AddRow(
 			account.ID,
 			"Pasha1",
 			 "volkov1",
-			 444444444444444,
-			12,
-			24,
-			924,
+			 "444444444444444",
+			 "12",
+			 "24",
+			 "924",
 			0,
 			0,
 			pq.Array(account.Statement),
@@ -263,10 +263,10 @@ func Test_GetAccountByID(t *testing.T) {
 		req := &models.RequestCreate{
 			FirstName:        "Pasha1",
 			LastName:         "volkov1",
-			CardNumber:       444444444444444,
-			CardExpiryMonth:  12,
-			CardExpiryYear:   24,
-			CardSecurityCode: 924,
+			CardNumber:       "444444444444444",
+			CardExpiryMonth:  "12",
+			CardExpiryYear:   "24",
+			CardSecurityCode: "924",
 		}
 		account := models.NewAccount(req)
 		colums := []string{
@@ -284,10 +284,10 @@ func Test_GetAccountByID(t *testing.T) {
 			account.ID,
 			"Pasha1",
 			"volkov1",
-			444444444444444,
-			12,
-			24,
-			924,
+			"444444444444444",
+			"12",
+			"24",
+			"924",
 			0,
 			0,
 			pq.Array(account.Statement),
@@ -314,10 +314,10 @@ func Test_GetAccountByCard(t *testing.T) {
 		req := &models.RequestCreate{
 			FirstName:        "Pasha1",
 			LastName:         "volkov1",
-			CardNumber:       444444444444444,
-			CardExpiryMonth:  12,
-			CardExpiryYear:   24,
-			CardSecurityCode: 924,
+			CardNumber:       "444444444444444",
+			CardExpiryMonth:  "12",
+			CardExpiryYear:   "24",
+			CardSecurityCode: "924",
 		}
 		account := models.NewAccount(req)
 		colums := []string{
@@ -335,10 +335,10 @@ func Test_GetAccountByCard(t *testing.T) {
 			account.ID,
 			"Pasha1",
 			"volkov1",
-			444444444444444,
-			12,
-			24,
-			924,
+			"444444444444444",
+			"12",
+			"24",
+			"924",
 			0,
 			0,
 			pq.Array(account.Statement),
@@ -366,15 +366,15 @@ func Test_DepositAccount(t *testing.T) {
 		req := &models.RequestCreate{
 			FirstName:        "Pasha1",
 			LastName:         "volkov1",
-			CardNumber:       444444444444444,
-			CardExpiryMonth:  12,
-			CardExpiryYear:   24,
-			CardSecurityCode: 924,
+			CardNumber:       "444444444444444",
+			CardExpiryMonth:  "12",
+			CardExpiryYear:   "24",
+			CardSecurityCode: "924",
 		}
 		account := models.NewAccount(req)
 
 		reqDep := &models.RequestDeposit{
-			CardNumber: 444444444444444,
+			CardNumber: "444444444444444",
 			Balance:    50,
 		}
 
@@ -393,10 +393,10 @@ func Test_DepositAccount(t *testing.T) {
 			account.ID,
 			"Pasha1",
 			"volkov1",
-			444444444444444,
-			12,
-			24,
-			924,
+			"444444444444444",
+			"12",
+			"24",
+			"924",
 			50,
 			0,
 			pq.Array(account.Statement),
@@ -427,20 +427,20 @@ func Test_SavePayment(t *testing.T) {
 		reqAcc := &models.RequestCreate{
 			FirstName:        "Pasha1",
 			LastName:         "volkov1",
-			CardNumber:       444444444444444,
-			CardExpiryMonth:  12,
-			CardExpiryYear:   24,
-			CardSecurityCode: 924,
+			CardNumber:       "444444444444444",
+			CardExpiryMonth:  "12",
+			CardExpiryYear:   "24",
+			CardSecurityCode: "924",
 		}
 		account := models.NewAccount(reqAcc)
 
 		reqMer := &models.RequestCreate{
 			FirstName:        "Pasha",
 			LastName:         "Volkov",
-			CardNumber:       444444444444434,
-			CardExpiryMonth:  10,
-			CardExpiryYear:   22,
-			CardSecurityCode: 934,
+			CardNumber:       "444444444444434",
+			CardExpiryMonth:  "10",
+			CardExpiryYear:   "22",
+			CardSecurityCode: "934",
 		}
 		merchant := models.NewAccount(reqMer)
 
@@ -449,10 +449,10 @@ func Test_SavePayment(t *testing.T) {
 			OrderId: "1",
 			Amount: 50,
 			Currency: "RUB",
-			CardNumber: 444444444444444,
-			CardExpiryMonth:  12,
-			CardExpiryYear:   24,
-			CardSecurityCode: 924,
+			CardNumber:       "444444444444444",
+			CardExpiryMonth:  "12",
+			CardExpiryYear:   "24",
+			CardSecurityCode: "924",
 		}
 		payment := models.CreateAuthPayment(payReq, account, merchant, "")
 
@@ -477,9 +477,9 @@ func Test_SavePayment(t *testing.T) {
 			50,
 			"",
 			"RUB",
-			444444444444444,
-			12,
-			24,
+			"444444444444444",
+			"12",
+			"24",
 			payment.CreatedAt,
 		)
 
@@ -521,10 +521,10 @@ func Test_SaveBalance(t *testing.T) {
 		req := &models.RequestCreate{
 			FirstName:        "Pasha1",
 			LastName:         "volkov1",
-			CardNumber:       444444444444444,
-			CardExpiryMonth:  12,
-			CardExpiryYear:   24,
-			CardSecurityCode: 924,
+			CardNumber:       "444444444444444",
+			CardExpiryMonth:  "12",
+			CardExpiryYear:   "24",
+			CardSecurityCode: "924",
 		}
 		account := models.NewAccount(req)
 
@@ -543,10 +543,10 @@ func Test_SaveBalance(t *testing.T) {
 			account.ID,
 			"Pasha1",
 			"volkov1",
-			444444444444444,
-			12,
-			24,
-			924,
+			"444444444444444",
+			"12",
+			"24",
+			"924",
 			50,
 			50,
 			pq.Array(account.Statement),
@@ -580,20 +580,20 @@ func Test_GetPaymentByID(t *testing.T) {
 		reqAcc := &models.RequestCreate{
 			FirstName:        "Pasha1",
 			LastName:         "volkov1",
-			CardNumber:       444444444444444,
-			CardExpiryMonth:  12,
-			CardExpiryYear:   24,
-			CardSecurityCode: 924,
+			CardNumber:       "444444444444444",
+			CardExpiryMonth:  "12",
+			CardExpiryYear:   "24",
+			CardSecurityCode: "924",
 		}
 		account := models.NewAccount(reqAcc)
 
 		reqMer := &models.RequestCreate{
 			FirstName:        "Pasha",
 			LastName:         "Volkov",
-			CardNumber:       444444444444434,
-			CardExpiryMonth:  10,
-			CardExpiryYear:   22,
-			CardSecurityCode: 934,
+			CardNumber:       "444444444444434",
+			CardExpiryMonth:  "10",
+			CardExpiryYear:   "22",
+			CardSecurityCode: "934",
 		}
 		merchant := models.NewAccount(reqMer)
 
@@ -602,10 +602,10 @@ func Test_GetPaymentByID(t *testing.T) {
 			OrderId: "1",
 			Amount: 50,
 			Currency: "RUB",
-			CardNumber: 444444444444444,
-			CardExpiryMonth:  12,
-			CardExpiryYear:   24,
-			CardSecurityCode: 924,
+			CardNumber:       "444444444444444",
+			CardExpiryMonth:  "12",
+			CardExpiryYear:   "24",
+			CardSecurityCode: "924",
 		}
 		payment := models.CreateAuthPayment(payReq, account, merchant, "")
 
@@ -630,9 +630,9 @@ func Test_GetPaymentByID(t *testing.T) {
 			50,
 			"",
 			"RUB",
-			444444444444444,
-			12,
-			24,
+			"444444444444444",
+			"12",
+			"24",
 			payment.CreatedAt,
 		)
 

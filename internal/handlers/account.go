@@ -19,6 +19,10 @@ func (s *JSONApiServer) createAccount(w http.ResponseWriter, r *http.Request) er
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
 	defer r.Body.Close()
+	// validation request create
+	if err := utils.ValidateCreateRequest(req); err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
 	account, err := s.storage.CreateAccount(r.Context(), req)
 	if err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})

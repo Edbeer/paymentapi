@@ -97,7 +97,7 @@ func (mr *MockStorageMockRecorder) GetAccount(ctx interface{}) *gomock.Call {
 }
 
 // GetAccountByCard mocks base method.
-func (m *MockStorage) GetAccountByCard(ctx context.Context, card int64) (*models.Account, error) {
+func (m *MockStorage) GetAccountByCard(ctx context.Context, card string) (*models.Account, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAccountByCard", ctx, card)
 	ret0, _ := ret[0].(*models.Account)

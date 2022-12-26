@@ -15,7 +15,7 @@ type Storage interface {
 	CreateAccount(ctx context.Context, req *models.RequestCreate) (*models.Account, error)
 	GetAccount(ctx context.Context) ([]*models.Account, error)
 	GetAccountByID(ctx context.Context, id uuid.UUID) (*models.Account, error)
-	GetAccountByCard(ctx context.Context, card int64) (*models.Account, error)
+	GetAccountByCard(ctx context.Context, card string) (*models.Account, error)
 	UpdateAccount(ctx context.Context, reqUp *models.RequestUpdate, id uuid.UUID) (*models.Account, error)
 	DeleteAccount(ctx context.Context, id uuid.UUID) error
 	DepositAccount(ctx context.Context, reqDep *models.RequestDeposit) (*models.Account, error)
@@ -115,7 +115,7 @@ func (s *PostgresStorage) GetAccountByID(ctx context.Context, id uuid.UUID) (*mo
 	return acc, nil
 }
 
-func (s *PostgresStorage) GetAccountByCard(ctx context.Context, card int64) (*models.Account, error) {
+func (s *PostgresStorage) GetAccountByCard(ctx context.Context, card string) (*models.Account, error) {
 	query := `SELECT * FROM account WHERE card_number = $1`
 	acc := &models.Account{}
 	if err := s.db.QueryRowContext(
