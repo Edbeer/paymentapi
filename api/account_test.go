@@ -1,4 +1,4 @@
-package handlers
+package api
 
 import (
 	"net/http"
@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/Edbeer/paymentapi/internal/models"
-	mockstore "github.com/Edbeer/paymentapi/internal/storage/mock"
+	"github.com/Edbeer/paymentapi/models"
 	"github.com/Edbeer/paymentapi/pkg/utils"
+	mockstore "github.com/Edbeer/paymentapi/storage/mock"
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -31,11 +31,13 @@ func Test_CreateAccount(t *testing.T) {
 	req := &models.RequestCreate{
 		FirstName:        "Pasha1",
 		LastName:         "volkov1",
-		CardNumber:       "444444444444444",
+		CardNumber:       "4444444444444444",
 		CardExpiryMonth:  "12",
 		CardExpiryYear:   "24",
 		CardSecurityCode: "924",
 	}
+	err = utils.ValidateCreateRequest(req)
+	require.NoError(t, err)
 	buffer, err := utils.AnyToBytesBuffer(req)
 	require.NoError(t, err)
 	require.NotNil(t, buffer)
@@ -184,8 +186,9 @@ func Test_UpdateAccount(t *testing.T) {
 	server := NewJSONApiServer("", db, mockStorage)
 	reqUp := &models.RequestUpdate{
 		FirstName:  "Pavel",
-		CardNumber:       "444444444444444",
+		CardNumber: "4444444444444444",
 	}
+	err = utils.ValidateUpdateRequest(reqUp)
 	buffer, err := utils.AnyToBytesBuffer(reqUp)
 	require.NoError(t, err)
 	require.NotNil(t, buffer)
@@ -223,7 +226,7 @@ func Test_DeleteAccount(t *testing.T) {
 	db, _, err := sqlmock.New()
 	require.NoError(t, err)
 	defer db.Close()
-	
+
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
 	server := NewJSONApiServer("", db, mockStorage)
@@ -250,14 +253,15 @@ func Test_DepositAccount(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
 	server := NewJSONApiServer("", db, mockStorage)
 	reqDep := &models.RequestDeposit{
 		CardNumber: "4444444444424323",
-		Balance: 44,
+		Balance:    44,
 	}
+	err = utils.ValidateDepositRequest(reqDep)
+	require.NoError(t, err)
 	buffer, err := utils.AnyToBytesBuffer(reqDep)
 	require.NoError(t, err)
 	require.NotNil(t, buffer)

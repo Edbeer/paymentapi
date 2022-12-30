@@ -5,7 +5,7 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/Edbeer/paymentapi/internal/models"
+	"github.com/Edbeer/paymentapi/models"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 	_ "github.com/lib/pq"

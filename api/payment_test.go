@@ -1,4 +1,4 @@
-package handlers
+package api
 
 import (
 	"net/http"
@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Edbeer/paymentapi/internal/models"
-	mockstore "github.com/Edbeer/paymentapi/internal/storage/mock"
+	"github.com/Edbeer/paymentapi/models"
+	mockstore "github.com/Edbeer/paymentapi/storage/mock"
 	"github.com/Edbeer/paymentapi/pkg/utils"
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
@@ -36,13 +36,14 @@ func Test_CreatePayment(t *testing.T) {
 		OrderId:          "1",
 		Amount:           50,
 		Currency:         "RUB",
-		CardNumber:       "444444444444444",
+		CardNumber:       "4444444444444444",
 		CardExpiryMonth:  "12",
 		CardExpiryYear:   "24",
 		CardSecurityCode: "924",
 	}
-	buffer, err := utils.AnyToBytesBuffer(reqPay)
+	err = utils.ValidatePaymentRequest(reqPay)
 	require.NoError(t, err)
+	buffer, err := utils.AnyToBytesBuffer(reqPay)
 	require.NotNil(t, buffer)
 	require.Nil(t, err)
 

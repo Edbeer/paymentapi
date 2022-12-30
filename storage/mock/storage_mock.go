@@ -9,7 +9,7 @@ import (
 	sql "database/sql"
 	reflect "reflect"
 
-	models "github.com/Edbeer/paymentapi/internal/models"
+	models "github.com/Edbeer/paymentapi/models"
 	gomock "github.com/golang/mock/gomock"
 	uuid "github.com/google/uuid"
 )

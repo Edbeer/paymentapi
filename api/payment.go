@@ -1,10 +1,11 @@
-package handlers
+package api
 
 import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/Edbeer/paymentapi/internal/models"
+	"github.com/Edbeer/paymentapi/models"
+	"github.com/Edbeer/paymentapi/pkg/utils"
 	"github.com/google/uuid"
 )
 
@@ -16,6 +17,10 @@ func (s *JSONApiServer) createPayment(w http.ResponseWriter, r *http.Request) er
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
 	defer r.Body.Close()
+	// validate request
+	if err := utils.ValidatePaymentRequest(reqPay); err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
 	// merchant account
 	id, err := getMerchantID(r)
 	if err != nil {

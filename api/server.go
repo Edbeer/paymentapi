@@ -1,4 +1,4 @@
-package handlers
+package api
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Edbeer/paymentapi/internal/models"
+	"github.com/Edbeer/paymentapi/models"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )

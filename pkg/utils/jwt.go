@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Edbeer/paymentapi/internal/models"
+	"github.com/Edbeer/paymentapi/models"
 	"github.com/golang-jwt/jwt/v4"
 )
 

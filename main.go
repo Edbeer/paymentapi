@@ -8,8 +8,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Edbeer/paymentapi/internal/handlers"
-	"github.com/Edbeer/paymentapi/internal/storage"
+	"github.com/Edbeer/paymentapi/api"
+	"github.com/Edbeer/paymentapi/storage"
 	"github.com/Edbeer/paymentapi/pkg/db"
 )
 
@@ -26,7 +26,7 @@ func main() {
 	psql := storage.NewPostgresStorage(db)
 
 	log.Println("init server")
-	s := handlers.NewJSONApiServer(":8080", db, psql)
+	s := api.NewJSONApiServer(":8080", db, psql)
 	go func() {
 		s.Run()
 	}()
