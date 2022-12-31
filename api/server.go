@@ -20,6 +20,7 @@ type Storage interface {
 	UpdateAccount(ctx context.Context, reqUp *models.RequestUpdate, id uuid.UUID) (*models.Account, error)
 	DeleteAccount(ctx context.Context, id uuid.UUID) error
 	DepositAccount(ctx context.Context, reqDep *models.RequestDeposit) (*models.Account, error)
+	GetAccountStatement(ctx context.Context, id uuid.UUID) ([]string, error)
 	SavePayment(ctx context.Context, tx *sql.Tx, payment *models.Payment) (*models.Payment, error)
 	GetPaymentByID(ctx context.Context, id uuid.UUID) (*models.Payment, error)
 	SaveBalance(ctx context.Context, tx *sql.Tx, account *models.Account, balance, bmoney uint64) (*models.Account, error)
@@ -59,6 +60,7 @@ func (s *JSONApiServer) Run() {
 	getRouter := router.Methods(http.MethodGet).Subrouter()
 	getRouter.HandleFunc("/account", HTTPHandler(s.getAccount))
 	getRouter.HandleFunc("/account/{id}", AuthJWT(HTTPHandler(s.getAccountByID)))
+	getRouter.HandleFunc("/account/statement/{id}", AuthJWT(HTTPHandler(s.getStatement)))
 	// UPDATE
 	putRouter := router.Methods(http.MethodPut).Subrouter()
 	putRouter.HandleFunc("/account/{id}", AuthJWT(HTTPHandler(s.updateAccount)))

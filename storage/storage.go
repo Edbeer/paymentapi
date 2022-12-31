@@ -19,6 +19,7 @@ type Storage interface {
 	UpdateAccount(ctx context.Context, reqUp *models.RequestUpdate, id uuid.UUID) (*models.Account, error)
 	DeleteAccount(ctx context.Context, id uuid.UUID) error
 	DepositAccount(ctx context.Context, reqDep *models.RequestDeposit) (*models.Account, error)
+	GetAccountStatement(ctx context.Context, id uuid.UUID) ([]string, error)
 	SavePayment(ctx context.Context, tx *sql.Tx, payment *models.Payment) (*models.Payment, error)
 	GetPaymentByID(ctx context.Context, id uuid.UUID) (*models.Payment, error)
 	SaveBalance(ctx context.Context, tx *sql.Tx, account *models.Account, balance, bmoney uint64) (*models.Account, error)
@@ -218,6 +219,28 @@ func (s *PostgresStorage) DepositAccount(ctx context.Context, reqDep *models.Req
 		return nil, err
 	}
 	return acc, nil
+}
+
+func (s *PostgresStorage) GetAccountStatement(ctx context.Context, id uuid.UUID) ([]string, error) {
+	query := `SELECT * FROM account WHERE id = $1`
+	acc := &models.Account{}
+
+	if err := s.db.QueryRowContext(
+		ctx,
+		query,
+		id,
+	).Scan(
+		&acc.ID, &acc.FirstName,
+		&acc.LastName, &acc.CardNumber,
+		&acc.CardExpiryMonth, &acc.CardExpiryYear,
+		&acc.CardSecurityCode, &acc.Balance,
+		&acc.BlockedMoney, pq.Array(&acc.Statement),
+		&acc.CreatedAt,
+	); err != nil {
+		return nil, err
+	}
+	return acc.Statement, nil
+
 }
 
 func (s *PostgresStorage) SavePayment(ctx context.Context, tx *sql.Tx, payment *models.Payment) (*models.Payment, error) {

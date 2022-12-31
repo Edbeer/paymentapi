@@ -302,3 +302,41 @@ func Test_DepositAccount(t *testing.T) {
 	require.NoError(t, err)
 	require.Nil(t, err)
 }
+
+func Test_GetStatemetn(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	db, _, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	mockStorage := mockstore.NewMockStorage(ctrl)
+
+	server := NewJSONApiServer("", db, mockStorage)
+	request := httptest.NewRequest(http.MethodGet, "/accounе/statement/{id}", nil)
+	recorder := httptest.NewRecorder()
+	uid := uuid.New()
+
+	account := &models.Account{
+		ID:               uid,
+		FirstName:        "Pasha",
+		LastName:         "volkov",
+		CardNumber:       "444444444444444",
+		CardExpiryMonth:  "12",
+		CardExpiryYear:   "24",
+		CardSecurityCode: "924",
+		Balance:          0,
+		BlockedMoney:     0,
+		Statement:        make([]string, 1),
+		CreatedAt:        time.Now(),
+	}
+
+	mockStorage.EXPECT().GetAccountStatement(request.Context(), uid).Return(account.Statement, nil).AnyTimes()
+
+	err = server.getAccountByID(recorder, request)
+	require.NoError(t, err)
+	require.Nil(t, err)
+}

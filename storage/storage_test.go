@@ -414,6 +414,58 @@ func Test_DepositAccount(t *testing.T) {
 	})
 }
 
+func Test_GetAccountStatement(t *testing.T) {
+	t.Parallel()
+
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	psql := NewPostgresStorage(db)
+
+	t.Run("GetAccountStatement", func(t *testing.T) {
+		req := &models.RequestCreate{
+			FirstName:        "Pasha1",
+			LastName:         "volkov1",
+			CardNumber:       "444444444444444",
+			CardExpiryMonth:  "12",
+			CardExpiryYear:   "24",
+			CardSecurityCode: "924",
+		}
+		account := models.NewAccount(req)
+		colums := []string{
+			"id",
+			"first_name",
+			"last_name",
+			"card_number",
+			"card_expiry_month",
+			"card_expiry_year",
+			"card_security_code",
+			"balance", "blocked_money", "statement",
+			"created_at",
+		}
+		rows := sqlmock.NewRows(colums).AddRow(
+			account.ID,
+			"Pasha1",
+			"volkov1",
+			"444444444444444",
+			"12",
+			"24",
+			"924",
+			0,
+			0,
+			pq.Array(account.Statement),
+			account.CreatedAt,
+		)
+
+		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM account WHERE id = $1`)).WithArgs(account.ID).WillReturnRows(rows)
+		statement, err := psql.GetAccountStatement(context.Background(), account.ID)
+		require.NoError(t, err)
+		require.Equal(t, statement, account.Statement)
+
+	})
+}
+
 func Test_SavePayment(t *testing.T) {
 	t.Parallel()
 

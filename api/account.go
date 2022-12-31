@@ -128,6 +128,18 @@ func (s *JSONApiServer) depositAccount(w http.ResponseWriter, r *http.Request) e
 	return WriteJSON(w, http.StatusOK, updatedAccount)
 }
 
+func (s *JSONApiServer) getStatement(w http.ResponseWriter, r *http.Request) error {
+	uuid, err := GetUUID(r)
+	if err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
+	statement, err := s.storage.GetAccountStatement(r.Context(), uuid)
+	if err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
+	return WriteJSON(w, http.StatusOK, statement)
+}
+
 // Get id from url
 func GetUUID(r *http.Request) (uuid.UUID, error) {
 	id := mux.Vars(r)["id"]

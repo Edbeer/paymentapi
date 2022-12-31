@@ -126,6 +126,21 @@ func (mr *MockStorageMockRecorder) GetAccountByID(ctx, id interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountByID", reflect.TypeOf((*MockStorage)(nil).GetAccountByID), ctx, id)
 }
 
+// GetAccountStatement mocks base method.
+func (m *MockStorage) GetAccountStatement(ctx context.Context, id uuid.UUID) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAccountStatement", ctx, id)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAccountStatement indicates an expected call of GetAccountStatement.
+func (mr *MockStorageMockRecorder) GetAccountStatement(ctx, id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountStatement", reflect.TypeOf((*MockStorage)(nil).GetAccountStatement), ctx, id)
+}
+
 // GetPaymentByID mocks base method.
 func (m *MockStorage) GetPaymentByID(ctx context.Context, id uuid.UUID) (*models.Payment, error) {
 	m.ctrl.T.Helper()
