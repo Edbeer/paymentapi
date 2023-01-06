@@ -9,7 +9,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/Edbeer/paymentapi/types"
 	"github.com/Edbeer/paymentapi/pkg/utils"
-	mockstore "github.com/Edbeer/paymentapi/storage/mock"
+	mockstore "github.com/Edbeer/paymentapi/api/mock"
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"

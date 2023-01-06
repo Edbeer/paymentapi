@@ -1,4 +1,3 @@
-//go:generate mockgen -source storage.go -destination mock/storage_mock.go -package mock
 package storage
 
 import (
@@ -10,21 +9,6 @@ import (
 	"github.com/lib/pq"
 	_ "github.com/lib/pq"
 )
-
-type Storage interface {
-	CreateAccount(ctx context.Context, reqAcc *types.RequestCreate) (*types.Account, error)
-	GetAccount(ctx context.Context) ([]*types.Account, error)
-	GetAccountByID(ctx context.Context, id uuid.UUID) (*types.Account, error)
-	GetAccountByCard(ctx context.Context, card string) (*types.Account, error)
-	UpdateAccount(ctx context.Context, reqUp *types.RequestUpdate, id uuid.UUID) (*types.Account, error)
-	DeleteAccount(ctx context.Context, id uuid.UUID) error
-	DepositAccount(ctx context.Context, reqDep *types.RequestDeposit) (*types.Account, error)
-	GetAccountStatement(ctx context.Context, id uuid.UUID) ([]string, error)
-	SavePayment(ctx context.Context, tx *sql.Tx, payment *types.Payment) (*types.Payment, error)
-	GetPaymentByID(ctx context.Context, id uuid.UUID) (*types.Payment, error)
-	SaveBalance(ctx context.Context, tx *sql.Tx, account *types.Account, balance, bmoney uint64) (*types.Account, error)
-	UpdateStatement(ctx context.Context, tx *sql.Tx, id, paymentId uuid.UUID) (*types.Account, error)
-}
 
 type PostgresStorage struct {
 	db *sql.DB
