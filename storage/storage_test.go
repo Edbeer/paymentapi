@@ -2,28 +2,16 @@ package storage
 
 import (
 	"context"
-	"database/sql"
 	"regexp"
 	"testing"
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/Edbeer/paymentapi/models"
+	"github.com/Edbeer/paymentapi/types"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"github.com/stretchr/testify/require"
 )
-
-func NewPostgresMock() (*PostgresStorage, error) {
-	db, err := sql.Open("sqlmock", "")
-	if err != nil {
-		return nil, err
-	}
-
-	return &PostgresStorage{
-		db: db,
-	}, err
-}
 
 func Test_CreateAccount(t *testing.T) {
 	t.Parallel()
@@ -35,7 +23,7 @@ func Test_CreateAccount(t *testing.T) {
 	psql := NewPostgresStorage(db)
 
 	t.Run("Create", func(t *testing.T) {
-		req := &models.RequestCreate{
+		req := &types.RequestCreate{
 			FirstName:        "Pasha1",
 			LastName:         "volkov1",
 			CardNumber:       "444444444444444",
@@ -43,7 +31,7 @@ func Test_CreateAccount(t *testing.T) {
 			CardExpiryYear:   "24",
 			CardSecurityCode: "924",
 		}
-		account := models.NewAccount(req)
+		account := types.NewAccount(req)
 
 		colums := []string{
 			"id",
@@ -83,10 +71,11 @@ func Test_CreateAccount(t *testing.T) {
 			account.CardSecurityCode,
 			account.Balance,
 			account.BlockedMoney,
-			pq.Array(account.Statement),).WillReturnRows(rows)
+			pq.Array(account.Statement)).WillReturnRows(rows)
 		createdUser, err := psql.CreateAccount(context.Background(), req)
 		require.NoError(t, err)
 		require.NotNil(t, createdUser)
+		require.Equal(t, createdUser.ID, account.ID)
 		require.Equal(t, createdUser, account)
 	})
 }
@@ -101,7 +90,7 @@ func Test_GetAccount(t *testing.T) {
 	psql := NewPostgresStorage(db)
 
 	t.Run("GetAccounts", func(t *testing.T) {
-		req1 := &models.RequestCreate{
+		req1 := &types.RequestCreate{
 			FirstName:        "Pasha1",
 			LastName:         "volkov1",
 			CardNumber:       "444444444444444",
@@ -109,7 +98,7 @@ func Test_GetAccount(t *testing.T) {
 			CardExpiryYear:   "24",
 			CardSecurityCode: "924",
 		}
-		account1 := models.NewAccount(req1)
+		account1 := types.NewAccount(req1)
 		colums := []string{
 			"id",
 			"first_name",
@@ -134,7 +123,7 @@ func Test_GetAccount(t *testing.T) {
 			pq.Array(account1.Statement),
 			account1.CreatedAt,
 		)
-		req2 := &models.RequestCreate{
+		req2 := &types.RequestCreate{
 			FirstName:        "Pasha",
 			LastName:         "volkov",
 			CardNumber:       "444444444444432",
@@ -142,7 +131,7 @@ func Test_GetAccount(t *testing.T) {
 			CardExpiryYear:   "25",
 			CardSecurityCode: "934",
 		}
-		account2 := models.NewAccount(req2)
+		account2 := types.NewAccount(req2)
 
 		rows2 := sqlmock.NewRows(colums).AddRow(
 			account2.ID,
@@ -175,10 +164,13 @@ func Test_UpdateAccount(t *testing.T) {
 	psql := NewPostgresStorage(db)
 
 	t.Run("Update", func(t *testing.T) {
-		req := &models.RequestUpdate{
+		reqToUpdate := &types.RequestUpdate{
 			FirstName:        "Pasha1",
 			LastName:         "volkov1",
 			CardNumber:       "444444444444444",
+			CardExpiryMonth:  "",
+			CardExpiryYear:   "",
+			CardSecurityCode: "",
 		}
 
 		colums := []string{
@@ -192,7 +184,7 @@ func Test_UpdateAccount(t *testing.T) {
 			"balance", "blocked_money", "statement",
 			"created_at",
 		}
-		req1 := &models.RequestCreate{
+		reqToCreate := &types.RequestCreate{
 			FirstName:        "Pasha",
 			LastName:         "volkov",
 			CardNumber:       "444444444444344",
@@ -200,8 +192,8 @@ func Test_UpdateAccount(t *testing.T) {
 			CardExpiryYear:   "24",
 			CardSecurityCode: "924",
 		}
-		account := models.NewAccount(req1)
-		rows2 := sqlmock.NewRows(colums).AddRow(
+		account := types.NewAccount(reqToCreate)
+		rows := sqlmock.NewRows(colums).AddRow(
 			account.ID,
 			"Pasha1",
 			 "volkov1",
@@ -218,15 +210,21 @@ func Test_UpdateAccount(t *testing.T) {
 		mock.ExpectQuery(regexp.QuoteMeta(`UPDATE account
 		SET first_name = COALESCE(NULLIF($1, ''), first_name),
 			last_name = COALESCE(NULLIF($2, ''), last_name),
-			card_number = COALESCE(NULLIF($3, 0), card_number)
-		WHERE id = $4
+			card_number = COALESCE(NULLIF($3, ''), card_number),
+			card_expiry_month = COALESCE(NULLIF($4, ''), card_expiry_month),
+			card_expiry_year = COALESCE(NULLIF($5, ''), card_expiry_year),
+			card_security_code = COALESCE(NULLIF($6, ''), card_security_code)
+		WHERE id = $7
 		RETURNING *`)).WithArgs(
-			req.FirstName,
-			req.LastName,
-			req.CardNumber,
-			account.ID).WillReturnRows(rows2)
+			reqToUpdate.FirstName,
+			reqToUpdate.LastName,
+			reqToUpdate.CardNumber,
+			reqToUpdate.CardExpiryMonth,
+			reqToUpdate.CardExpiryYear,
+			reqToUpdate.CardSecurityCode,
+			account.ID).WillReturnRows(rows)
 
-		updatedUser, err := psql.UpdateAccount(context.Background(), req, account.ID)
+		updatedUser, err := psql.UpdateAccount(context.Background(), reqToUpdate, account.ID)
 		require.NoError(t, err)
 		require.NotEqual(t, updatedUser, account)
 	})
@@ -260,7 +258,7 @@ func Test_GetAccountByID(t *testing.T) {
 	psql := NewPostgresStorage(db)
 
 	t.Run("GetAccountByID", func(t *testing.T) {
-		req := &models.RequestCreate{
+		req := &types.RequestCreate{
 			FirstName:        "Pasha1",
 			LastName:         "volkov1",
 			CardNumber:       "444444444444444",
@@ -268,7 +266,7 @@ func Test_GetAccountByID(t *testing.T) {
 			CardExpiryYear:   "24",
 			CardSecurityCode: "924",
 		}
-		account := models.NewAccount(req)
+		account := types.NewAccount(req)
 		colums := []string{
 			"id",
 			"first_name",
@@ -311,7 +309,7 @@ func Test_GetAccountByCard(t *testing.T) {
 	psql := NewPostgresStorage(db)
 
 	t.Run("GetAccountByCard", func(t *testing.T) {
-		req := &models.RequestCreate{
+		req := &types.RequestCreate{
 			FirstName:        "Pasha1",
 			LastName:         "volkov1",
 			CardNumber:       "444444444444444",
@@ -319,7 +317,7 @@ func Test_GetAccountByCard(t *testing.T) {
 			CardExpiryYear:   "24",
 			CardSecurityCode: "924",
 		}
-		account := models.NewAccount(req)
+		account := types.NewAccount(req)
 		colums := []string{
 			"id",
 			"first_name",
@@ -363,7 +361,7 @@ func Test_DepositAccount(t *testing.T) {
 	psql := NewPostgresStorage(db)
 
 	t.Run("Daposit", func(t *testing.T) {
-		req := &models.RequestCreate{
+		req := &types.RequestCreate{
 			FirstName:        "Pasha1",
 			LastName:         "volkov1",
 			CardNumber:       "444444444444444",
@@ -371,9 +369,9 @@ func Test_DepositAccount(t *testing.T) {
 			CardExpiryYear:   "24",
 			CardSecurityCode: "924",
 		}
-		account := models.NewAccount(req)
+		account := types.NewAccount(req)
 
-		reqDep := &models.RequestDeposit{
+		reqDep := &types.RequestDeposit{
 			CardNumber: "444444444444444",
 			Balance:    50,
 		}
@@ -424,7 +422,7 @@ func Test_GetAccountStatement(t *testing.T) {
 	psql := NewPostgresStorage(db)
 
 	t.Run("GetAccountStatement", func(t *testing.T) {
-		req := &models.RequestCreate{
+		req := &types.RequestCreate{
 			FirstName:        "Pasha1",
 			LastName:         "volkov1",
 			CardNumber:       "444444444444444",
@@ -432,7 +430,7 @@ func Test_GetAccountStatement(t *testing.T) {
 			CardExpiryYear:   "24",
 			CardSecurityCode: "924",
 		}
-		account := models.NewAccount(req)
+		account := types.NewAccount(req)
 		colums := []string{
 			"id",
 			"first_name",
@@ -476,7 +474,7 @@ func Test_SavePayment(t *testing.T) {
 	psql := NewPostgresStorage(db)
 
 	t.Run("SavePayment", func(t *testing.T) {
-		reqAcc := &models.RequestCreate{
+		reqAcc := &types.RequestCreate{
 			FirstName:        "Pasha1",
 			LastName:         "volkov1",
 			CardNumber:       "444444444444444",
@@ -484,9 +482,9 @@ func Test_SavePayment(t *testing.T) {
 			CardExpiryYear:   "24",
 			CardSecurityCode: "924",
 		}
-		account := models.NewAccount(reqAcc)
+		account := types.NewAccount(reqAcc)
 
-		reqMer := &models.RequestCreate{
+		reqMer := &types.RequestCreate{
 			FirstName:        "Pasha",
 			LastName:         "Volkov",
 			CardNumber:       "444444444444434",
@@ -494,9 +492,9 @@ func Test_SavePayment(t *testing.T) {
 			CardExpiryYear:   "22",
 			CardSecurityCode: "934",
 		}
-		merchant := models.NewAccount(reqMer)
+		merchant := types.NewAccount(reqMer)
 
-		payReq := &models.PaymentRequest{
+		payReq := &types.PaymentRequest{
 			AccountId: account.ID,
 			OrderId: "1",
 			Amount: 50,
@@ -506,7 +504,7 @@ func Test_SavePayment(t *testing.T) {
 			CardExpiryYear:   "24",
 			CardSecurityCode: "924",
 		}
-		payment := models.CreateAuthPayment(payReq, account, merchant, "")
+		payment := types.CreateAuthPayment(payReq, account, merchant, "")
 
 		colums := []string{
 			"id",
@@ -570,7 +568,7 @@ func Test_SaveBalance(t *testing.T) {
 	psql := NewPostgresStorage(db)
 
 	t.Run("SaveBalance", func(t *testing.T) {
-		req := &models.RequestCreate{
+		req := &types.RequestCreate{
 			FirstName:        "Pasha1",
 			LastName:         "volkov1",
 			CardNumber:       "444444444444444",
@@ -578,7 +576,7 @@ func Test_SaveBalance(t *testing.T) {
 			CardExpiryYear:   "24",
 			CardSecurityCode: "924",
 		}
-		account := models.NewAccount(req)
+		account := types.NewAccount(req)
 
 		colums := []string{
 			"id",
@@ -629,7 +627,7 @@ func Test_GetPaymentByID(t *testing.T) {
 	psql := NewPostgresStorage(db)
 
 	t.Run("GetPaymentByID", func(t *testing.T) {
-		reqAcc := &models.RequestCreate{
+		reqAcc := &types.RequestCreate{
 			FirstName:        "Pasha1",
 			LastName:         "volkov1",
 			CardNumber:       "444444444444444",
@@ -637,9 +635,9 @@ func Test_GetPaymentByID(t *testing.T) {
 			CardExpiryYear:   "24",
 			CardSecurityCode: "924",
 		}
-		account := models.NewAccount(reqAcc)
+		account := types.NewAccount(reqAcc)
 
-		reqMer := &models.RequestCreate{
+		reqMer := &types.RequestCreate{
 			FirstName:        "Pasha",
 			LastName:         "Volkov",
 			CardNumber:       "444444444444434",
@@ -647,9 +645,9 @@ func Test_GetPaymentByID(t *testing.T) {
 			CardExpiryYear:   "22",
 			CardSecurityCode: "934",
 		}
-		merchant := models.NewAccount(reqMer)
+		merchant := types.NewAccount(reqMer)
 
-		payReq := &models.PaymentRequest{
+		payReq := &types.PaymentRequest{
 			AccountId: account.ID,
 			OrderId: "1",
 			Amount: 50,
@@ -659,7 +657,7 @@ func Test_GetPaymentByID(t *testing.T) {
 			CardExpiryYear:   "24",
 			CardSecurityCode: "924",
 		}
-		payment := models.CreateAuthPayment(payReq, account, merchant, "")
+		payment := types.CreateAuthPayment(payReq, account, merchant, "")
 
 		colums := []string{
 			"id",

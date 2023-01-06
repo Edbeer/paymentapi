@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/Edbeer/paymentapi/models"
+	"github.com/Edbeer/paymentapi/types"
 	"github.com/Edbeer/paymentapi/pkg/utils"
 	"github.com/google/uuid"
 )
@@ -12,7 +12,7 @@ import (
 // Create payment: Acceptance of payment
 func (s *JSONApiServer) createPayment(w http.ResponseWriter, r *http.Request) error {
 	// read body request
-	reqPay := &models.PaymentRequest{}
+	reqPay := &types.PaymentRequest{}
 	if err := json.NewDecoder(r.Body).Decode(reqPay); err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
@@ -47,7 +47,7 @@ func (s *JSONApiServer) createPayment(w http.ResponseWriter, r *http.Request) er
 		if err != nil {
 			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: "wrong transaction"})
 		}
-		payment := models.CreateAuthPayment(reqPay, personalAccount, merchantAccount, "wrong payment request")
+		payment := types.CreateAuthPayment(reqPay, personalAccount, merchantAccount, "wrong payment request")
 		savedPayment, err := s.storage.SavePayment(r.Context(), tx, payment)
 		if err != nil {
 			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
@@ -61,7 +61,7 @@ func (s *JSONApiServer) createPayment(w http.ResponseWriter, r *http.Request) er
 		if err := tx.Commit(); err != nil {
 			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: "wrong transaction"})
 		} 
-		return WriteJSON(w, http.StatusOK, models.PaymentResponse{
+		return WriteJSON(w, http.StatusOK, types.PaymentResponse{
 			ID:     payment.ID,
 			Status: payment.Status,
 		})
@@ -75,7 +75,7 @@ func (s *JSONApiServer) createPayment(w http.ResponseWriter, r *http.Request) er
 		if err != nil {
 			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: "wrong transaction"})
 		}
-		payment := models.CreateAuthPayment(reqPay, personalAccount, merchantAccount, "Insufficient funds")
+		payment := types.CreateAuthPayment(reqPay, personalAccount, merchantAccount, "Insufficient funds")
 		savedPayment, err := s.storage.SavePayment(r.Context(), tx, payment)
 		if err != nil {
 			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
@@ -89,7 +89,7 @@ func (s *JSONApiServer) createPayment(w http.ResponseWriter, r *http.Request) er
 		if err := tx.Commit(); err != nil {
 			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: "wrong transaction"})
 		} 
-		return WriteJSON(w, http.StatusBadGateway, models.PaymentResponse{
+		return WriteJSON(w, http.StatusBadGateway, types.PaymentResponse{
 			ID:     payment.ID,
 			Status: payment.Status,
 		})
@@ -115,7 +115,7 @@ func (s *JSONApiServer) createPayment(w http.ResponseWriter, r *http.Request) er
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
 	// create new payment
-	payment := models.CreateAuthPayment(reqPay, personalAccount, merchantAccount, "Approved")
+	payment := types.CreateAuthPayment(reqPay, personalAccount, merchantAccount, "Approved")
 	savedPayment, err := s.storage.SavePayment(r.Context(), tx, payment)
 	if err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
@@ -136,7 +136,7 @@ func (s *JSONApiServer) createPayment(w http.ResponseWriter, r *http.Request) er
 	if err := tx.Commit(); err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: "wrong transaction"})
 	} 
-	return WriteJSON(w, http.StatusOK, models.PaymentResponse{
+	return WriteJSON(w, http.StatusOK, types.PaymentResponse{
 		ID:     payment.ID,
 		Status: payment.Status,
 	})
@@ -144,7 +144,7 @@ func (s *JSONApiServer) createPayment(w http.ResponseWriter, r *http.Request) er
 
 // Capture payment: Successful payment
 func (s *JSONApiServer) capturePayment(w http.ResponseWriter, r *http.Request) error {
-	reqPaid := &models.PaidRequest{}
+	reqPaid := &types.PaidRequest{}
 	if err := json.NewDecoder(r.Body).Decode(reqPaid); err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
@@ -178,7 +178,7 @@ func (s *JSONApiServer) capturePayment(w http.ResponseWriter, r *http.Request) e
 			if err != nil {
 				return WriteJSON(w, http.StatusBadRequest, ApiError{Error: "wrong transaction"})
 			}
-			completedPayment := models.CreateCompletePayment(reqPaid, referncedPayment, "Invalid amount")
+			completedPayment := types.CreateCompletePayment(reqPaid, referncedPayment, "Invalid amount")
 			invalidPayment, err := s.storage.SavePayment(r.Context(), tx, completedPayment)
 			if err != nil {
 				return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
@@ -192,7 +192,7 @@ func (s *JSONApiServer) capturePayment(w http.ResponseWriter, r *http.Request) e
 			if err := tx.Commit(); err != nil {
 				return WriteJSON(w, http.StatusBadRequest, ApiError{Error: "wrong transaction"})
 			} 
-			return WriteJSON(w, http.StatusOK, models.PaymentResponse{
+			return WriteJSON(w, http.StatusOK, types.PaymentResponse{
 				ID:     invalidPayment.ID,
 				Status: invalidPayment.Status,
 			})
@@ -209,7 +209,7 @@ func (s *JSONApiServer) capturePayment(w http.ResponseWriter, r *http.Request) e
 		if err != nil {
 			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 		}
-		completedPayment := models.CreateCompletePayment(reqPaid, referncedPayment, "Successful payment")
+		completedPayment := types.CreateCompletePayment(reqPaid, referncedPayment, "Successful payment")
 		completedPayment, err = s.storage.SavePayment(r.Context(), tx, completedPayment)
 		if err != nil {
 			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
@@ -245,12 +245,12 @@ func (s *JSONApiServer) capturePayment(w http.ResponseWriter, r *http.Request) e
 		if err := tx.Commit(); err != nil {
 			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: "wrong transaction"})
 		} 
-		return WriteJSON(w, http.StatusOK, models.PaymentResponse{
+		return WriteJSON(w, http.StatusOK, types.PaymentResponse{
 			ID:     completedPayment.ID,
 			Status: completedPayment.Status,
 		})
 	}
-	return WriteJSON(w, http.StatusOK, models.PaymentResponse{
+	return WriteJSON(w, http.StatusOK, types.PaymentResponse{
 		ID:     reqPaid.PaymentId,
 		Status: "Invalid transaction",
 	})
@@ -258,7 +258,7 @@ func (s *JSONApiServer) capturePayment(w http.ResponseWriter, r *http.Request) e
 
 // Refund: Refunded payment, if there is a refund
 func (s *JSONApiServer) refundPayment(w http.ResponseWriter, r *http.Request) error {
-	reqPaid := &models.PaidRequest{}
+	reqPaid := &types.PaidRequest{}
 	if err := json.NewDecoder(r.Body).Decode(reqPaid); err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
@@ -293,7 +293,7 @@ func (s *JSONApiServer) refundPayment(w http.ResponseWriter, r *http.Request) er
 			if err != nil {
 				return WriteJSON(w, http.StatusBadRequest, ApiError{Error: "wrong transaction"})
 			}
-			completedPayment := models.CreateCompletePayment(reqPaid, referncedPayment, "Invalid amount")
+			completedPayment := types.CreateCompletePayment(reqPaid, referncedPayment, "Invalid amount")
 			invalidPayment, err := s.storage.SavePayment(r.Context(), tx, completedPayment)
 			if err != nil {
 				return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
@@ -307,7 +307,7 @@ func (s *JSONApiServer) refundPayment(w http.ResponseWriter, r *http.Request) er
 			if err := tx.Commit(); err != nil {
 				return WriteJSON(w, http.StatusBadRequest, ApiError{Error: "wrong transaction"})
 			} 
-			return WriteJSON(w, http.StatusOK, models.PaymentResponse{
+			return WriteJSON(w, http.StatusOK, types.PaymentResponse{
 				ID:     invalidPayment.ID,
 				Status: invalidPayment.Status,
 			})
@@ -324,7 +324,7 @@ func (s *JSONApiServer) refundPayment(w http.ResponseWriter, r *http.Request) er
 		if err != nil {
 			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 		}
-		completedPayment := models.CreateCompletePayment(reqPaid, referncedPayment, "Successful refund")
+		completedPayment := types.CreateCompletePayment(reqPaid, referncedPayment, "Successful refund")
 		completedPayment, err = s.storage.SavePayment(r.Context(), tx, completedPayment)
 		if err != nil {
 			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
@@ -359,12 +359,12 @@ func (s *JSONApiServer) refundPayment(w http.ResponseWriter, r *http.Request) er
 		if err := tx.Commit(); err != nil {
 			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: "wrong transaction"})
 		} 
-		return WriteJSON(w, http.StatusOK, models.PaymentResponse{
+		return WriteJSON(w, http.StatusOK, types.PaymentResponse{
 			ID:     completedPayment.ID,
 			Status: completedPayment.Status,
 		})
 	}
-	return WriteJSON(w, http.StatusOK, models.PaymentResponse{
+	return WriteJSON(w, http.StatusOK, types.PaymentResponse{
 		ID:     reqPaid.PaymentId,
 		Status: "Invalid transaction",
 	})
@@ -378,7 +378,7 @@ func (s *JSONApiServer) cancelPayment(w http.ResponseWriter, r *http.Request) er
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
 	// paid request
-	reqPaid := &models.PaidRequest{}
+	reqPaid := &types.PaidRequest{}
 	if err := json.NewDecoder(r.Body).Decode(reqPaid); err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
@@ -408,7 +408,7 @@ func (s *JSONApiServer) cancelPayment(w http.ResponseWriter, r *http.Request) er
 			if err != nil {
 				return WriteJSON(w, http.StatusBadRequest, ApiError{Error: "wrong transaction"})
 			}
-			completedPayment := models.CreateCompletePayment(reqPaid, referncedPayment, "Invalid amount")
+			completedPayment := types.CreateCompletePayment(reqPaid, referncedPayment, "Invalid amount")
 			invalidPayment, err := s.storage.SavePayment(r.Context(), tx, completedPayment)
 			if err != nil {
 				return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
@@ -422,7 +422,7 @@ func (s *JSONApiServer) cancelPayment(w http.ResponseWriter, r *http.Request) er
 			if err := tx.Commit(); err != nil {
 				return WriteJSON(w, http.StatusBadRequest, ApiError{Error: "wrong transaction"})
 			} 
-			return WriteJSON(w, http.StatusOK, models.PaymentResponse{
+			return WriteJSON(w, http.StatusOK, types.PaymentResponse{
 				ID:     invalidPayment.ID,
 				Status: invalidPayment.Status,
 			})
@@ -439,7 +439,7 @@ func (s *JSONApiServer) cancelPayment(w http.ResponseWriter, r *http.Request) er
 		if err != nil {
 			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 		}
-		completedPayment := models.CreateCompletePayment(reqPaid, referncedPayment, "Successful cancel")
+		completedPayment := types.CreateCompletePayment(reqPaid, referncedPayment, "Successful cancel")
 		completedPayment, err = s.storage.SavePayment(r.Context(), tx, completedPayment)
 		if err != nil {
 			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
@@ -475,12 +475,12 @@ func (s *JSONApiServer) cancelPayment(w http.ResponseWriter, r *http.Request) er
 		if err := tx.Commit(); err != nil {
 			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: "wrong transaction"})
 		} 
-		return WriteJSON(w, http.StatusOK, models.PaymentResponse{
+		return WriteJSON(w, http.StatusOK, types.PaymentResponse{
 			ID:     completedPayment.ID,
 			Status: completedPayment.Status,
 		})
 	}
-	return WriteJSON(w, http.StatusOK, models.PaymentResponse{
+	return WriteJSON(w, http.StatusOK, types.PaymentResponse{
 		ID:     reqPaid.PaymentId,
 		Status: "Invalid transaction",
 	})

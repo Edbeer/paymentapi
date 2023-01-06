@@ -7,14 +7,14 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Edbeer/paymentapi/models"
+	"github.com/Edbeer/paymentapi/types"
 	"github.com/Edbeer/paymentapi/pkg/utils"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
 
 func (s *JSONApiServer) createAccount(w http.ResponseWriter, r *http.Request) error {
-	req := &models.RequestCreate{}
+	req := &types.RequestCreate{}
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
@@ -78,7 +78,7 @@ func (s *JSONApiServer) updateAccount(w http.ResponseWriter, r *http.Request) er
 	if err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
-	reqUpd := &models.RequestUpdate{}
+	reqUpd := &types.RequestUpdate{}
 	if err := json.NewDecoder(r.Body).Decode(reqUpd); err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
@@ -106,7 +106,7 @@ func (s *JSONApiServer) deleteAccount(w http.ResponseWriter, r *http.Request) er
 }
 
 func (s *JSONApiServer) depositAccount(w http.ResponseWriter, r *http.Request) error {
-	reqDep := &models.RequestDeposit{}
+	reqDep := &types.RequestDeposit{}
 	if err := json.NewDecoder(r.Body).Decode(reqDep); err != nil {
 		return WriteJSON(w, http.StatusBadRequest, "account doesn't exist")
 	}

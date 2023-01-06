@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Edbeer/paymentapi/models"
-	mockstore "github.com/Edbeer/paymentapi/storage/mock"
+	"github.com/Edbeer/paymentapi/types"
+	mockstore "github.com/Edbeer/paymentapi/api/mock"
 	"github.com/Edbeer/paymentapi/pkg/utils"
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
@@ -31,7 +31,7 @@ func Test_CreatePayment(t *testing.T) {
 	server := NewJSONApiServer("", db, mockStorage)
 
 	uid := uuid.New()
-	reqPay := &models.PaymentRequest{
+	reqPay := &types.PaymentRequest{
 		AccountId:        uid,
 		OrderId:          "1",
 		Amount:           50,
@@ -52,7 +52,7 @@ func Test_CreatePayment(t *testing.T) {
 
 	t.Run("CreatePayment", func(t *testing.T) {
 		// account
-		account := &models.Account{
+		account := &types.Account{
 			ID:               uid,
 			FirstName:        "Pavel",
 			LastName:         "Voklov",
@@ -68,7 +68,7 @@ func Test_CreatePayment(t *testing.T) {
 
 		// merchant
 		mid := uuid.New()
-		merchant := &models.Account{
+		merchant := &types.Account{
 			ID:               mid,
 			FirstName:        "Pasha",
 			LastName:         "Volkov",
@@ -92,7 +92,7 @@ func Test_CreatePayment(t *testing.T) {
 		mockStorage.EXPECT().SaveBalance(request.Context(), tx, merchant, merchant.Balance, merchant.BlockedMoney).Return(merchant, nil).AnyTimes()
 
 		
-		payment := models.CreateAuthPayment(reqPay, account, merchant, "Approved")
+		payment := types.CreateAuthPayment(reqPay, account, merchant, "Approved")
 		mockStorage.EXPECT().SavePayment(request.Context(), tx, payment).Return(payment, nil).AnyTimes()
 
 		merchant.Statement = append(merchant.Statement, payment.ID.String())
@@ -113,7 +113,7 @@ func Test_CreatePayment(t *testing.T) {
 
 	t.Run("Wrong payment request", func(t *testing.T) {
 		// account
-		account := &models.Account{
+		account := &types.Account{
 			ID:               uid,
 			FirstName:        "Pavel",
 			LastName:         "Voklov",
@@ -129,7 +129,7 @@ func Test_CreatePayment(t *testing.T) {
 
 		// merchant
 		mid := uuid.New()
-		merchant := &models.Account{
+		merchant := &types.Account{
 			ID:               mid,
 			FirstName:        "Pasha",
 			LastName:         "Volkov",
@@ -146,7 +146,7 @@ func Test_CreatePayment(t *testing.T) {
 		mockStorage.EXPECT().GetAccountByID(request.Context(), mid).Return(merchant, nil).AnyTimes()
 		
 		tx, _ := db.BeginTx(request.Context(), nil)
-		payment := models.CreateAuthPayment(reqPay, account, merchant, "wrong payment request")
+		payment := types.CreateAuthPayment(reqPay, account, merchant, "wrong payment request")
 		mockStorage.EXPECT().SavePayment(request.Context(), tx, payment).Return(payment, nil).AnyTimes()
 		
 		merchant.Statement = append(merchant.Statement, payment.ID.String())
@@ -160,7 +160,7 @@ func Test_CreatePayment(t *testing.T) {
 
 	t.Run("Insufficient funds", func(t *testing.T) {
 		// account
-		account := &models.Account{
+		account := &types.Account{
 			ID:               uid,
 			FirstName:        "Pavel",
 			LastName:         "Voklov",
@@ -176,7 +176,7 @@ func Test_CreatePayment(t *testing.T) {
 
 		// merchant
 		mid := uuid.New()
-		merchant := &models.Account{
+		merchant := &types.Account{
 			ID:               mid,
 			FirstName:        "Pasha",
 			LastName:         "Volkov",
@@ -195,7 +195,7 @@ func Test_CreatePayment(t *testing.T) {
 		require.Less(t, account.Balance, reqPay.Amount)
 
 		tx, _ := db.BeginTx(request.Context(), nil)
-		payment := models.CreateAuthPayment(reqPay, account, merchant, "wrong payment request")
+		payment := types.CreateAuthPayment(reqPay, account, merchant, "wrong payment request")
 		mockStorage.EXPECT().SavePayment(request.Context(), tx, payment).Return(payment, nil).AnyTimes()
 
 		merchant.Statement = append(merchant.Statement, payment.ID.String())
@@ -223,7 +223,7 @@ func Test_CapturePayment(t *testing.T) {
 
 	server := NewJSONApiServer("", db, mockStorage)
 	pid := uuid.New()
-	reqPaid := &models.PaidRequest{
+	reqPaid := &types.PaidRequest{
 		OrderId:   "1",
 		PaymentId: pid,
 		Operation: "Capture",
@@ -240,7 +240,7 @@ func Test_CapturePayment(t *testing.T) {
 
 	t.Run("CapturePayment", func(t *testing.T) {
 		mid := uuid.New()
-		refPayment := &models.Payment{
+		refPayment := &types.Payment{
 			ID:              pid,
 			BusinessId:      mid,
 			OrderId:         "1",
@@ -253,7 +253,7 @@ func Test_CapturePayment(t *testing.T) {
 			CardExpiryYear:   "24",
 			CreatedAt:       time.Time{},
 		}
-		merchant := &models.Account{
+		merchant := &types.Account{
 			ID:               mid,
 			FirstName:        "Pasha",
 			LastName:         "Volkov",
@@ -267,7 +267,7 @@ func Test_CapturePayment(t *testing.T) {
 			CreatedAt:        time.Now(),
 		}
 		uid := uuid.New()
-		account := &models.Account{
+		account := &types.Account{
 			ID:               uid,
 			FirstName:        "Pavel",
 			LastName:         "Voklov",
@@ -288,7 +288,7 @@ func Test_CapturePayment(t *testing.T) {
 		refPayment.Amount = refPayment.Amount - reqPaid.Amount
 		mockStorage.EXPECT().SavePayment(request.Context(), tx, refPayment).Return(refPayment, nil).AnyTimes()
 
-		completedPayment := models.CreateCompletePayment(reqPaid, refPayment, "Successful payment")
+		completedPayment := types.CreateCompletePayment(reqPaid, refPayment, "Successful payment")
 		mockStorage.EXPECT().SavePayment(request.Context(), tx, completedPayment).Return(completedPayment, nil).AnyTimes()
 
 		mockStorage.EXPECT().GetAccountByCard(request.Context(), refPayment.CardNumber).Return(account, nil).AnyTimes()
@@ -314,7 +314,7 @@ func Test_CapturePayment(t *testing.T) {
 
 	t.Run("Invalid amount", func(t *testing.T) {
 		mid := uuid.New()
-		refPayment := &models.Payment{
+		refPayment := &types.Payment{
 			ID:              pid,
 			BusinessId:      mid,
 			OrderId:         "1",
@@ -327,7 +327,7 @@ func Test_CapturePayment(t *testing.T) {
 			CardExpiryYear:   "24",
 			CreatedAt:       time.Time{},
 		}
-		merchant := &models.Account{
+		merchant := &types.Account{
 			ID:               mid,
 			FirstName:        "Pasha",
 			LastName:         "Volkov",
@@ -345,7 +345,7 @@ func Test_CapturePayment(t *testing.T) {
 		mockStorage.EXPECT().GetPaymentByID(request.Context(), pid).Return(refPayment, nil).AnyTimes()
 
 		tx, _ := db.BeginTx(request.Context(), nil)
-		invalidPayment := models.CreateCompletePayment(reqPaid, refPayment, "Invalid amount")
+		invalidPayment := types.CreateCompletePayment(reqPaid, refPayment, "Invalid amount")
 		mockStorage.EXPECT().SavePayment(request.Context(), tx, invalidPayment).Return(invalidPayment, nil).AnyTimes()
 
 		merchant.Statement = append(merchant.Statement, invalidPayment.ID.String())
@@ -373,7 +373,7 @@ func Test_RefundPayment(t *testing.T) {
 
 	server := NewJSONApiServer("", db, mockStorage)
 	pid := uuid.New()
-	reqPaid := &models.PaidRequest{
+	reqPaid := &types.PaidRequest{
 		OrderId:   "1",
 		PaymentId: pid,
 		Operation: "Refund",
@@ -390,7 +390,7 @@ func Test_RefundPayment(t *testing.T) {
 
 	t.Run("Refund", func(t *testing.T) {
 		mid := uuid.New()
-		merchant := &models.Account{
+		merchant := &types.Account{
 			ID:               mid,
 			FirstName:        "Pasha",
 			LastName:         "Volkov",
@@ -405,7 +405,7 @@ func Test_RefundPayment(t *testing.T) {
 		}
 
 		uid := uuid.New()
-		account := &models.Account{
+		account := &types.Account{
 			ID:               uid,
 			FirstName:        "Pavel",
 			LastName:         "Voklov",
@@ -419,7 +419,7 @@ func Test_RefundPayment(t *testing.T) {
 			CreatedAt:        time.Now(),
 		}
 
-		refPayment := &models.Payment{
+		refPayment := &types.Payment{
 			ID:              uuid.New(),
 			BusinessId:      mid,
 			OrderId:         "1",
@@ -439,7 +439,7 @@ func Test_RefundPayment(t *testing.T) {
 		refPayment.Amount = refPayment.Amount - reqPaid.Amount
 		mockStorage.EXPECT().SavePayment(request.Context(), tx, refPayment).Return(refPayment, nil).AnyTimes()
 
-		completedPayment := models.CreateCompletePayment(reqPaid, refPayment, "Successful refund")
+		completedPayment := types.CreateCompletePayment(reqPaid, refPayment, "Successful refund")
 		mockStorage.EXPECT().SavePayment(request.Context(), tx, completedPayment).Return(completedPayment, nil).AnyTimes()
 
 		mockStorage.EXPECT().GetAccountByCard(request.Context(), refPayment.CardNumber).Return(account, nil).AnyTimes()
@@ -463,7 +463,7 @@ func Test_RefundPayment(t *testing.T) {
 
 	t.Run("Invalid amount", func(t *testing.T) {
 		mid := uuid.New()
-		merchant := &models.Account{
+		merchant := &types.Account{
 			ID:               mid,
 			FirstName:        "Pasha",
 			LastName:         "Volkov",
@@ -477,7 +477,7 @@ func Test_RefundPayment(t *testing.T) {
 			CreatedAt:        time.Now(),
 		}
 
-		refPayment := &models.Payment{
+		refPayment := &types.Payment{
 			ID:              uuid.New(),
 			BusinessId:      mid,
 			OrderId:         "1",
@@ -494,7 +494,7 @@ func Test_RefundPayment(t *testing.T) {
 		mockStorage.EXPECT().GetPaymentByID(request.Context(), pid).Return(refPayment, nil).AnyTimes()
 
 		tx, _ := db.BeginTx(request.Context(), nil)
-		invalidPayment := models.CreateCompletePayment(reqPaid, refPayment, "Invalid amount")
+		invalidPayment := types.CreateCompletePayment(reqPaid, refPayment, "Invalid amount")
 		mockStorage.EXPECT().SavePayment(request.Context(), tx, invalidPayment).Return(invalidPayment, nil).AnyTimes()
 
 		merchant.Statement = append(merchant.Statement, invalidPayment.ID.String())
@@ -522,7 +522,7 @@ func Test_CancelPaymen(t *testing.T) {
 
 	server := NewJSONApiServer("", db, mockStorage)
 	pid := uuid.New()
-	reqPaid := &models.PaidRequest{
+	reqPaid := &types.PaidRequest{
 		OrderId:   "1",
 		PaymentId: pid,
 		Operation: "Cancel",
@@ -539,7 +539,7 @@ func Test_CancelPaymen(t *testing.T) {
 
 	t.Run("Cancel", func(t *testing.T) {
 		mid := uuid.New()
-		refPayment := &models.Payment{
+		refPayment := &types.Payment{
 			ID:              pid,
 			BusinessId:      mid,
 			OrderId:         "1",
@@ -552,7 +552,7 @@ func Test_CancelPaymen(t *testing.T) {
 			CardExpiryYear:   "24",
 			CreatedAt:       time.Time{},
 		}
-		merchant := &models.Account{
+		merchant := &types.Account{
 			ID:               mid,
 			FirstName:        "Pasha",
 			LastName:         "Volkov",
@@ -566,7 +566,7 @@ func Test_CancelPaymen(t *testing.T) {
 			CreatedAt:        time.Now(),
 		}
 		uid := uuid.New()
-		account := &models.Account{
+		account := &types.Account{
 			ID:               uid,
 			FirstName:        "Pavel",
 			LastName:         "Voklov",
@@ -587,7 +587,7 @@ func Test_CancelPaymen(t *testing.T) {
 		refPayment.Amount = refPayment.Amount - reqPaid.Amount
 		mockStorage.EXPECT().SavePayment(request.Context(), tx, refPayment).Return(refPayment, nil).AnyTimes()
 
-		completedPayment := models.CreateCompletePayment(reqPaid, refPayment, "Successful cancel")
+		completedPayment := types.CreateCompletePayment(reqPaid, refPayment, "Successful cancel")
 		mockStorage.EXPECT().SavePayment(request.Context(), tx, completedPayment).Return(completedPayment, nil).AnyTimes()
 		
 		mockStorage.EXPECT().GetAccountByCard(request.Context(), refPayment.CardNumber).Return(account, nil).AnyTimes()
@@ -612,7 +612,7 @@ func Test_CancelPaymen(t *testing.T) {
 
 	t.Run("Invalid amount", func(t *testing.T) {
 		mid := uuid.New()
-		merchant := &models.Account{
+		merchant := &types.Account{
 			ID:               mid,
 			FirstName:        "Pasha",
 			LastName:         "Volkov",
@@ -626,7 +626,7 @@ func Test_CancelPaymen(t *testing.T) {
 			CreatedAt:        time.Now(),
 		}
 
-		refPayment := &models.Payment{
+		refPayment := &types.Payment{
 			ID:              uuid.New(),
 			BusinessId:      mid,
 			OrderId:         "1",
@@ -643,7 +643,7 @@ func Test_CancelPaymen(t *testing.T) {
 		mockStorage.EXPECT().GetPaymentByID(request.Context(), pid).Return(refPayment, nil).AnyTimes()
 
 		tx, _ := db.BeginTx(request.Context(), nil)
-		invalidPayment := models.CreateCompletePayment(reqPaid, refPayment, "Invalid amount")
+		invalidPayment := types.CreateCompletePayment(reqPaid, refPayment, "Invalid amount")
 		mockStorage.EXPECT().SavePayment(request.Context(), tx, invalidPayment).Return(invalidPayment, nil).AnyTimes()
 
 		merchant.Statement = append(merchant.Statement, invalidPayment.ID.String())

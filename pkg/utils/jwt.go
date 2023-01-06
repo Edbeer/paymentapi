@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Edbeer/paymentapi/models"
+	"github.com/Edbeer/paymentapi/types"
 	"github.com/golang-jwt/jwt/v4"
 )
 
 // Create JWT
-func CreateJWT(account *models.Account) (string, error) {
+func CreateJWT(account *types.Account) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"id":        account.ID.String(),
 		"card":      account.CardNumber,

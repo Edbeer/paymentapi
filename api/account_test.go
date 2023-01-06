@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/Edbeer/paymentapi/models"
+	"github.com/Edbeer/paymentapi/types"
 	"github.com/Edbeer/paymentapi/pkg/utils"
 	mockstore "github.com/Edbeer/paymentapi/storage/mock"
 	"github.com/golang/mock/gomock"
@@ -28,7 +28,7 @@ func Test_CreateAccount(t *testing.T) {
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
 	server := NewJSONApiServer("", db, mockStorage)
-	req := &models.RequestCreate{
+	req := &types.RequestCreate{
 		FirstName:        "Pasha1",
 		LastName:         "volkov1",
 		CardNumber:       "4444444444444444",
@@ -45,13 +45,12 @@ func Test_CreateAccount(t *testing.T) {
 
 	request := httptest.NewRequest(http.MethodPost, "/account", buffer)
 	recorder := httptest.NewRecorder()
-	reqAcc := models.NewAccount(req)
-
-	mockStorage.EXPECT().CreateAccount(request.Context(), gomock.Eq(req)).Return(&models.Account{
+	reqAcc := types.NewAccount(req)
+	mockStorage.EXPECT().CreateAccount(request.Context(), gomock.Eq(req)).Return(&types.Account{
 		ID:               reqAcc.ID,
 		FirstName:        "Pasha1",
 		LastName:         "volkov1",
-		CardNumber:       "444444444444444",
+		CardNumber:       "4444444444444444",
 		CardExpiryMonth:  "12",
 		CardExpiryYear:   "24",
 		CardSecurityCode: "924",
@@ -84,7 +83,7 @@ func Test_GetAccount(t *testing.T) {
 	request := httptest.NewRequest(http.MethodGet, "/account", nil)
 	recorder := httptest.NewRecorder()
 
-	accounts := []*models.Account{
+	accounts := []*types.Account{
 		{
 			ID:               uuid.New(),
 			FirstName:        "Pasha",
@@ -150,7 +149,7 @@ func Test_GetAccountByID(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	uid := uuid.New()
 
-	account := &models.Account{
+	account := &types.Account{
 		ID:               uid,
 		FirstName:        "Pasha",
 		LastName:         "volkov",
@@ -184,9 +183,13 @@ func Test_UpdateAccount(t *testing.T) {
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
 	server := NewJSONApiServer("", db, mockStorage)
-	reqUp := &models.RequestUpdate{
-		FirstName:  "Pavel",
-		CardNumber: "4444444444444444",
+	reqUp := &types.RequestUpdate{
+		FirstName:        "Pasha1",
+		LastName:         "volkov1",
+		CardNumber:       "444444444444444",
+		CardExpiryMonth:  "",
+		CardExpiryYear:   "",
+		CardSecurityCode: "",
 	}
 	err = utils.ValidateUpdateRequest(reqUp)
 	buffer, err := utils.AnyToBytesBuffer(reqUp)
@@ -197,10 +200,10 @@ func Test_UpdateAccount(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	uid := uuid.New()
 
-	account := &models.Account{
+	account := &types.Account{
 		ID:               uid,
-		FirstName:        "Pavel",
-		LastName:         "volkov",
+		FirstName:        "Pasha1",
+		LastName:         "volkov1",
 		CardNumber:       "444444444444444",
 		CardExpiryMonth:  "12",
 		CardExpiryYear:   "24",
@@ -212,6 +215,10 @@ func Test_UpdateAccount(t *testing.T) {
 	}
 
 	mockStorage.EXPECT().UpdateAccount(request.Context(), reqUp, uid).Return(account, nil).AnyTimes()
+	require.Equal(t, reqUp.FirstName, account.FirstName)
+	require.Equal(t, reqUp.LastName, account.LastName)
+	require.Equal(t, reqUp.CardNumber, account.CardNumber)
+	
 	err = server.updateAccount(recorder, request)
 	require.NoError(t, err)
 	require.Nil(t, err)
@@ -256,7 +263,7 @@ func Test_DepositAccount(t *testing.T) {
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
 	server := NewJSONApiServer("", db, mockStorage)
-	reqDep := &models.RequestDeposit{
+	reqDep := &types.RequestDeposit{
 		CardNumber: "4444444444424323",
 		Balance:    44,
 	}
@@ -269,7 +276,7 @@ func Test_DepositAccount(t *testing.T) {
 	request := httptest.NewRequest(http.MethodPost, "/account/deposit", buffer)
 	recorder := httptest.NewRecorder()
 	uid := uuid.New()
-	account := &models.Account{
+	account := &types.Account{
 		ID:               uid,
 		FirstName:        "Pavel",
 		LastName:         "volkov",
@@ -282,7 +289,7 @@ func Test_DepositAccount(t *testing.T) {
 		Statement:        make([]string, 1),
 		CreatedAt:        time.Now(),
 	}
-	account2 := &models.Account{
+	account2 := &types.Account{
 		ID:               uid,
 		FirstName:        "Pavel",
 		LastName:         "volkov",
@@ -320,7 +327,7 @@ func Test_GetStatemetn(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	uid := uuid.New()
 
-	account := &models.Account{
+	account := &types.Account{
 		ID:               uid,
 		FirstName:        "Pasha",
 		LastName:         "volkov",

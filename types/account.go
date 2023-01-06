@@ -1,4 +1,4 @@
-package models
+package types
 
 import (
 	"time"
@@ -23,7 +23,6 @@ type Account struct {
 
 func NewAccount(req *RequestCreate) *Account {
 	return &Account{
-		ID:               uuid.New(),
 		FirstName:        req.FirstName,
 		LastName:         req.LastName,
 		CardNumber:       req.CardNumber,
@@ -44,9 +43,12 @@ type RequestDeposit struct {
 
 // Request for update account
 type RequestUpdate struct {
-	FirstName  string `json:"first_name"`
-	LastName   string `json:"last_name"`
-	CardNumber string `json:"card_number"`
+	FirstName        string `json:"first_name"`
+	LastName         string `json:"last_name"`
+	CardNumber       string `json:"card_number"`
+	CardExpiryMonth  string `json:"card_expiry_month"`
+	CardExpiryYear   string `json:"card_expiry_year"`
+	CardSecurityCode string `json:"card_security_code"`
 }
 
 // Request for create account
