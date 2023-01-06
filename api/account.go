@@ -1,4 +1,4 @@
-package handlers
+package api
 
 import (
 	"encoding/json"
@@ -7,18 +7,22 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Edbeer/paymentapi/internal/models"
+	"github.com/Edbeer/paymentapi/types"
 	"github.com/Edbeer/paymentapi/pkg/utils"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
 
 func (s *JSONApiServer) createAccount(w http.ResponseWriter, r *http.Request) error {
-	req := &models.RequestCreate{}
+	req := &types.RequestCreate{}
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
 	defer r.Body.Close()
+	// validate request
+	if err := utils.ValidateCreateRequest(req); err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
 	account, err := s.storage.CreateAccount(r.Context(), req)
 	if err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
@@ -74,11 +78,15 @@ func (s *JSONApiServer) updateAccount(w http.ResponseWriter, r *http.Request) er
 	if err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
-	reqUpd := &models.RequestUpdate{}
+	reqUpd := &types.RequestUpdate{}
 	if err := json.NewDecoder(r.Body).Decode(reqUpd); err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
 	defer r.Body.Close()
+	// validate request
+	if err := utils.ValidateUpdateRequest(reqUpd); err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
 	account, err := s.storage.UpdateAccount(r.Context(), reqUpd, uuid)
 	if err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
@@ -98,14 +106,17 @@ func (s *JSONApiServer) deleteAccount(w http.ResponseWriter, r *http.Request) er
 }
 
 func (s *JSONApiServer) depositAccount(w http.ResponseWriter, r *http.Request) error {
-	reqDep := &models.RequestDeposit{}
+	reqDep := &types.RequestDeposit{}
 	if err := json.NewDecoder(r.Body).Decode(reqDep); err != nil {
 		return WriteJSON(w, http.StatusBadRequest, "account doesn't exist")
 	}
-
+	// validate request
+	if err := utils.ValidateDepositRequest(reqDep); err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
 	acc, err := s.storage.GetAccountByCard(r.Context(), reqDep.CardNumber)
 	if err != nil {
-		return WriteJSON(w, http.StatusBadRequest, "ccount doesn't exist")
+		return WriteJSON(w, http.StatusBadRequest, "account doesn't exist")
 	}
 	acc.Balance = acc.Balance + reqDep.Balance
 	reqDep.Balance = acc.Balance
@@ -115,6 +126,18 @@ func (s *JSONApiServer) depositAccount(w http.ResponseWriter, r *http.Request) e
 	}
 
 	return WriteJSON(w, http.StatusOK, updatedAccount)
+}
+
+func (s *JSONApiServer) getStatement(w http.ResponseWriter, r *http.Request) error {
+	uuid, err := GetUUID(r)
+	if err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
+	statement, err := s.storage.GetAccountStatement(r.Context(), uuid)
+	if err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
+	return WriteJSON(w, http.StatusOK, statement)
 }
 
 // Get id from url
