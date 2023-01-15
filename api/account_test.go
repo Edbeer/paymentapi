@@ -27,7 +27,7 @@ func Test_CreateAccount(t *testing.T) {
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
-	server := NewJSONApiServer("", db, mockStorage)
+	server := NewJSONApiServer("", db, nil, mockStorage)
 	req := &types.RequestCreate{
 		FirstName:        "Pasha1",
 		LastName:         "volkov1",
@@ -78,7 +78,7 @@ func Test_GetAccount(t *testing.T) {
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
-	server := NewJSONApiServer("", db, mockStorage)
+	server := NewJSONApiServer("", db, nil, mockStorage)
 
 	request := httptest.NewRequest(http.MethodGet, "/account", nil)
 	recorder := httptest.NewRecorder()
@@ -144,7 +144,7 @@ func Test_GetAccountByID(t *testing.T) {
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
-	server := NewJSONApiServer("", db, mockStorage)
+	server := NewJSONApiServer("", db, nil, mockStorage)
 	request := httptest.NewRequest(http.MethodGet, "/accounе/{id}", nil)
 	recorder := httptest.NewRecorder()
 	uid := uuid.New()
@@ -182,7 +182,7 @@ func Test_UpdateAccount(t *testing.T) {
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
-	server := NewJSONApiServer("", db, mockStorage)
+	server := NewJSONApiServer("", db, nil, mockStorage)
 	reqUp := &types.RequestUpdate{
 		FirstName:        "Pasha1",
 		LastName:         "volkov1",
@@ -236,7 +236,7 @@ func Test_DeleteAccount(t *testing.T) {
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
-	server := NewJSONApiServer("", db, mockStorage)
+	server := NewJSONApiServer("", db, nil, mockStorage)
 
 	request := httptest.NewRequest(http.MethodDelete, "/account/{id}", nil)
 	recorder := httptest.NewRecorder()
@@ -262,7 +262,7 @@ func Test_DepositAccount(t *testing.T) {
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
-	server := NewJSONApiServer("", db, mockStorage)
+	server := NewJSONApiServer("", db, nil, mockStorage)
 	reqDep := &types.RequestDeposit{
 		CardNumber: "4444444444424323",
 		Balance:    44,
@@ -322,7 +322,7 @@ func Test_GetStatemetn(t *testing.T) {
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
-	server := NewJSONApiServer("", db, mockStorage)
+	server := NewJSONApiServer("", db, nil, mockStorage)
 	request := httptest.NewRequest(http.MethodGet, "/accounе/statement/{id}", nil)
 	recorder := httptest.NewRecorder()
 	uid := uuid.New()

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Edbeer/paymentapi/types"
+	"github.com/go-redis/redis/v9"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
@@ -31,12 +32,14 @@ type Storage interface {
 type JSONApiServer struct {
 	storage Storage
 	Server  *http.Server
-	db *sql.DB
+	db      *sql.DB
+	redis   *redis.Client
 }
 
-func NewJSONApiServer(listenAddr string, db *sql.DB, storage Storage) *JSONApiServer {
+func NewJSONApiServer(listenAddr string, db *sql.DB, redis *redis.Client, storage Storage) *JSONApiServer {
 	return &JSONApiServer{
-		db: db,
+		db:      db,
+		redis: redis,
 		storage: storage,
 		Server: &http.Server{
 			Addr:         listenAddr,
