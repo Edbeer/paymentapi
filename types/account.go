@@ -60,3 +60,9 @@ type RequestCreate struct {
 	CardExpiryYear   string `json:"card_expiry_year"`
 	CardSecurityCode string `json:"card_security_code"`
 }
+
+// Session model
+type Session struct {
+	RefreshToken string    `json:"refresh_token" redis:"refresh_token"`
+	UserID       uuid.UUID `json:"id" redis:"id"`
+}
