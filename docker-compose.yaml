@@ -5,31 +5,45 @@ services:
     container_name: paymentapi
     build:
       dockerfile: Dockerfile
-    command: ./wait-for-postgres.sh paymentdb ./bin/api
+    command: ./wait-for-postgres.sh paydb ./bin/api
     ports:
       - "8080:8080"
     environment:
       - POSTGRES_PASSWORD=postgres
     depends_on:
-      - paymentdb
+      - paydb
+      - redis
     restart: always
     networks:
       - backend
   
-  paymentdb:
+  paydb:
     image: postgres:15.1
-    container_name: paymentdb
+    container_name: paydb
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_HOST=paymentdb
+      - POSTGRES_HOST=paydb
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=paymentdb
+      - POSTGRES_DB=paydb
       - PGDATA = "/var/lib/postgresql/data/pgdata"
     volumes:
       - ./migrations/000001_paymentdb.up.sql:/docker-entrypoint-initdb.d/initdb.sql
       - ./pgdata:/var/lib/postgresql/data
+    restart: always
+    networks:
+      - backend
+
+  redis:
+    image: redis:7.0
+    container_name: redis
+    ports:
+      - "6379:6379"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=examplepass
     restart: always
     networks:
       - backend

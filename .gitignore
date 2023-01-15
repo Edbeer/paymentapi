@@ -2,3 +2,4 @@ bin
 postgres-data
 pgdata
 .vscode
+dump.rdb

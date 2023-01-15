@@ -21,6 +21,12 @@ docker-exec: docker-start
 docker-stop:
 	docker stop paymentdb
 
+redis-start:
+	docker start redis
+
+redis-exec:
+	docker exec -it redis redis-cli
+
 # migrations
 migrate-create:
 	migrate create -ext sql -dir ./migrations -seq paymentdb
