@@ -28,7 +28,7 @@ func Test_CreatePayment(t *testing.T) {
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
-	server := NewJSONApiServer("", db, nil, mockStorage)
+	server := NewJSONApiServer("", db, nil, mockStorage, nil)
 
 	uid := uuid.New()
 	reqPay := &types.PaymentRequest{
@@ -221,7 +221,7 @@ func Test_CapturePayment(t *testing.T) {
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
-	server := NewJSONApiServer("", db, nil, mockStorage)
+	server := NewJSONApiServer("", db, nil, mockStorage, nil)
 	pid := uuid.New()
 	reqPaid := &types.PaidRequest{
 		OrderId:   "1",
@@ -371,7 +371,7 @@ func Test_RefundPayment(t *testing.T) {
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
-	server := NewJSONApiServer("", db, nil, mockStorage)
+	server := NewJSONApiServer("", db, nil, mockStorage, nil)
 	pid := uuid.New()
 	reqPaid := &types.PaidRequest{
 		OrderId:   "1",
@@ -520,7 +520,7 @@ func Test_CancelPaymen(t *testing.T) {
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
-	server := NewJSONApiServer("", db, nil, mockStorage)
+	server := NewJSONApiServer("", db, nil, mockStorage, nil)
 	pid := uuid.New()
 	reqPaid := &types.PaidRequest{
 		OrderId:   "1",

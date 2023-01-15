@@ -3,12 +3,10 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"net/http"
-	"time"
 
-	"github.com/Edbeer/paymentapi/types"
 	"github.com/Edbeer/paymentapi/pkg/utils"
+	"github.com/Edbeer/paymentapi/types"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
@@ -34,18 +32,20 @@ func (s *JSONApiServer) createAccount(w http.ResponseWriter, r *http.Request) er
 	}
 	w.Header().Add("x-jwt-token", tokenString)
 
-	// refresh token
-	refreshToken := newRefreshToken()
+	// refreshToken
+	refreshToken, err := s.redisStorage.CreateSession(r.Context(), &types.Session{
+		UserID: account.ID,
+	}, 86400)
 	// cookie
 	cookie := &http.Cookie{
-		Name: "refresh-token",
-		Value: refreshToken,
-		Path: "/",
+		Name:       "refresh-token",
+		Value:      refreshToken,
+		Path:       "/",
 		RawExpires: "",
-		MaxAge: 86400,
-		Secure: false,
-		HttpOnly: true,
-		SameSite: 0,
+		MaxAge:     86400,
+		Secure:     false,
+		HttpOnly:   true,
+		SameSite:   0,
 	}
 	http.SetCookie(w, cookie)
 	fmt.Println(tokenString)
@@ -140,6 +140,104 @@ func (s *JSONApiServer) getStatement(w http.ResponseWriter, r *http.Request) err
 	return WriteJSON(w, http.StatusOK, statement)
 }
 
+func (s *JSONApiServer) signIn(w http.ResponseWriter, r *http.Request) error {
+	req := &types.LoginRequest{}
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
+	account, err := s.storage.GetAccountByID(r.Context(), req.ID)
+	if err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
+
+	// jwt-token
+	tokenString, err := utils.CreateJWT(account)
+	if err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
+	w.Header().Add("x-jwt-token", tokenString)
+
+	// refreshToken
+	refreshToken, err := s.redisStorage.CreateSession(r.Context(), &types.Session{
+		UserID: account.ID,
+	}, 86400)
+
+	// cookie
+	cookie := &http.Cookie{
+		Name:       "refresh-token",
+		Value:      refreshToken,
+		Path:       "/",
+		RawExpires: "",
+		MaxAge:     86400,
+		Secure:     false,
+		HttpOnly:   true,
+		SameSite:   0,
+	}
+	http.SetCookie(w, cookie)
+
+	return WriteJSON(w, http.StatusOK, account)
+}
+
+func (s *JSONApiServer) signOut(w http.ResponseWriter, r *http.Request) error {
+	cookie, err := r.Cookie("refresh-token")
+	if err != nil {
+		if err == http.ErrNoCookie {
+			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: "Cookie doesn't exist"})
+		}
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
+	if err := s.redisStorage.DeleteSession(r.Context(), cookie.Value); err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})	
+	}
+	return WriteJSON(w, http.StatusOK, "LogOut")
+}
+
+func (s *JSONApiServer) refreshTokens(w http.ResponseWriter, r *http.Request) error {
+	req := &types.RefreshRequest{}
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
+	uid, err := s.redisStorage.GetUserID(r.Context(), req.RefreshToken)
+	if err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
+
+	account, err := s.storage.GetAccountByID(r.Context(), uid)
+	if err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
+
+	// jwt-token
+	tokenString, err := utils.CreateJWT(account)
+	if err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
+	w.Header().Add("x-jwt-token", tokenString)
+
+	// refreshToken
+	refreshToken, err := s.redisStorage.CreateSession(r.Context(), &types.Session{
+		UserID: account.ID,
+	}, 86400)
+
+	// cookie
+	cookie := &http.Cookie{
+		Name:       "refresh-token",
+		Value:      refreshToken,
+		Path:       "/",
+		RawExpires: "",
+		MaxAge:     86400,
+		Secure:     false,
+		HttpOnly:   true,
+		SameSite:   0,
+	}
+	http.SetCookie(w, cookie)
+
+	return WriteJSON(w, http.StatusOK, &types.RefreshResponse{
+		RefreshToken: refreshToken,
+		AccessToken:  tokenString,
+	})
+}
+
 // Get id from url
 func GetUUID(r *http.Request) (uuid.UUID, error) {
 	id := mux.Vars(r)["id"]
@@ -149,19 +247,4 @@ func GetUUID(r *http.Request) (uuid.UUID, error) {
 	}
 
 	return uid, nil
-}
-
-// refresh token
-func newRefreshToken() string {
-	b := make([]byte, 32)
-
-	s := rand.NewSource(time.Now().Unix())
-	r := rand.New(s)
-
-	_, err := r.Read(b)
-	if err != nil {
-		return ""
-	}
-
-	return fmt.Sprintf("%x", b)
 }

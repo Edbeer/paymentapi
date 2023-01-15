@@ -29,18 +29,26 @@ type Storage interface {
 	UpdateStatement(ctx context.Context, tx *sql.Tx, id, paymentId uuid.UUID) (*types.Account, error)
 }
 
-type JSONApiServer struct {
-	storage Storage
-	Server  *http.Server
-	db      *sql.DB
-	redis   *redis.Client
+type RedisStorage interface {
+	CreateSession(ctx context.Context, session *types.Session, expire int) (string, error)
+	GetUserID(ctx context.Context, refreshToken string) (uuid.UUID, error)
+	DeleteSession(ctx context.Context, refreshToken string) error
 }
 
-func NewJSONApiServer(listenAddr string, db *sql.DB, redis *redis.Client, storage Storage) *JSONApiServer {
+type JSONApiServer struct {
+	storage      Storage
+	redisStorage RedisStorage
+	Server       *http.Server
+	db           *sql.DB
+	redis        *redis.Client
+}
+
+func NewJSONApiServer(listenAddr string, db *sql.DB, redis *redis.Client, storage Storage, redisStorage RedisStorage) *JSONApiServer {
 	return &JSONApiServer{
 		db:      db,
-		redis: redis,
+		redis:   redis,
 		storage: storage,
+		redisStorage: redisStorage,
 		Server: &http.Server{
 			Addr:         listenAddr,
 			ReadTimeout:  5 * time.Second,
@@ -55,7 +63,11 @@ func (s *JSONApiServer) Run() {
 	// POST
 	postRouter := router.Methods(http.MethodPost).Subrouter()
 	postRouter.HandleFunc("/account", HTTPHandler(s.createAccount))
+	postRouter.HandleFunc("/account/sign-in", HTTPHandler(s.signIn))
+	postRouter.HandleFunc("/account/sign-out", HTTPHandler(s.signOut))
 	postRouter.HandleFunc("/account/deposit", HTTPHandler(s.depositAccount))
+	postRouter.HandleFunc("/account/refresh", HTTPHandler(s.refreshTokens))
+	// payment
 	postRouter.HandleFunc("/payment/auth", HTTPHandler(s.createPayment))
 	postRouter.HandleFunc("/payment/capture/{id}", HTTPHandler(s.capturePayment))
 	postRouter.HandleFunc("/payment/refund/{id}", HTTPHandler(s.refundPayment))

@@ -61,8 +61,21 @@ type RequestCreate struct {
 	CardSecurityCode string `json:"card_security_code"`
 }
 
+type LoginRequest struct {
+	ID uuid.UUID `json:"id"`
+}
+
 // Session model
 type Session struct {
 	RefreshToken string    `json:"refresh_token" redis:"refresh_token"`
 	UserID       uuid.UUID `json:"id" redis:"id"`
+}
+
+type RefreshRequest struct {
+	RefreshToken string `json:"refresh_token"`
+}
+
+type RefreshResponse struct {
+	RefreshToken string `json:"refresh_token"`
+	AccessToken  string `json:"access_token"`
 }

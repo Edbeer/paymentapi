@@ -10,6 +10,8 @@ import (
 
 	"github.com/Edbeer/paymentapi/api"
 	"github.com/Edbeer/paymentapi/storage/psql"
+	"github.com/Edbeer/paymentapi/storage/redis"
+
 	"github.com/Edbeer/paymentapi/pkg/db/psql"
 	"github.com/Edbeer/paymentapi/pkg/db/redis"
 )
@@ -28,11 +30,11 @@ func main() {
 	redisClient := red.NewRedisClient()
 	defer redisClient.Close()
 	log.Println("init redis")
-	
-	psql := postgres.NewPostgresStorage(db)
 
+	psql := postgres.NewPostgresStorage(db)
+	redisStore := redisrepo.NewRedisStorage(redisClient)
 	log.Println("init server")
-	s := api.NewJSONApiServer(":8080", db, redisClient, psql)
+	s := api.NewJSONApiServer(":8080", db, redisClient, psql, redisStore)
 	go func() {
 		s.Run()
 	}()

@@ -7,9 +7,11 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/Edbeer/paymentapi/types"
-	"github.com/Edbeer/paymentapi/pkg/utils"
 	mockstore "github.com/Edbeer/paymentapi/api/mock"
+	"github.com/Edbeer/paymentapi/pkg/utils"
+	"github.com/Edbeer/paymentapi/types"
+	"github.com/alicebob/miniredis"
+	"github.com/go-redis/redis/v9"
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -25,9 +27,17 @@ func Test_CreateAccount(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	mockStorage := mockstore.NewMockStorage(ctrl)
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatal(err)
+	}
+	client := redis.NewClient(&redis.Options{
+		Addr: mr.Addr(),
+	})
 
-	server := NewJSONApiServer("", db, nil, mockStorage)
+	mockStorage := mockstore.NewMockStorage(ctrl)
+	mockRedis := mockstore.NewMockRedisStorage(ctrl)
+	server := NewJSONApiServer("", db, client, mockStorage, mockRedis)
 	req := &types.RequestCreate{
 		FirstName:        "Pasha1",
 		LastName:         "volkov1",
@@ -60,10 +70,192 @@ func Test_CreateAccount(t *testing.T) {
 		CreatedAt:        reqAcc.CreatedAt,
 	}, nil).AnyTimes()
 
+	sess := &types.Session{
+		UserID: reqAcc.ID,
+	}
+	token := "refresh-token"
+	mockRedis.EXPECT().CreateSession(request.Context(), gomock.Eq(sess), 86400).Return(token, nil)
+
 	err = server.createAccount(recorder, request)
 	require.NoError(t, err)
 	require.Nil(t, err)
 	require.NotNil(t, reqAcc.ID)
+}
+
+func Test_SignIn(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	db, _, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatal(err)
+	}
+	client := redis.NewClient(&redis.Options{
+		Addr: mr.Addr(),
+	})
+
+	mockStorage := mockstore.NewMockStorage(ctrl)
+	mockRedis := mockstore.NewMockRedisStorage(ctrl)
+	server := NewJSONApiServer("", db, client, mockStorage, mockRedis)
+
+	req := &types.LoginRequest{
+		ID: uuid.New(),
+	}
+
+	buffer, err := utils.AnyToBytesBuffer(req)
+	require.NoError(t, err)
+	require.NotNil(t, buffer)
+	require.Nil(t, err)
+
+	request := httptest.NewRequest(http.MethodPost, "/account/sign-in", buffer)
+	recorder := httptest.NewRecorder()
+
+	account := &types.Account{
+		ID:               req.ID,
+		FirstName:        "Pasha1",
+		LastName:         "volkov1",
+		CardNumber:       "4444444444444444",
+		CardExpiryMonth:  "12",
+		CardExpiryYear:   "24",
+		CardSecurityCode: "924",
+		Balance:          0,
+		BlockedMoney:     0,
+		Statement:        []string{},
+		CreatedAt:        time.Now(),
+	}
+
+	mockStorage.EXPECT().GetAccountByID(request.Context(), req.ID).Return(account, nil).AnyTimes()
+	sess := &types.Session{
+		UserID: req.ID,
+	}
+	token := "refresh-token"
+	mockRedis.EXPECT().CreateSession(request.Context(), gomock.Eq(sess), 86400).Return(token, nil)
+
+	err = server.signIn(recorder, request)
+	require.NoError(t, err)
+	require.Nil(t, err)
+	require.NotNil(t, req.ID)
+}
+
+func Test_SignOut(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	db, _, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatal(err)
+	}
+	client := redis.NewClient(&redis.Options{
+		Addr: mr.Addr(),
+	})
+
+	mockStorage := mockstore.NewMockStorage(ctrl)
+	mockRedis := mockstore.NewMockRedisStorage(ctrl)
+	server := NewJSONApiServer("", db, client, mockStorage, mockRedis)
+
+	request := httptest.NewRequest(http.MethodPost, "/account/sign-out", nil)
+	recorder := httptest.NewRecorder()
+
+	token := "refresh-token"
+	cookieValue := "cookieValue"
+
+	request.AddCookie(&http.Cookie{Name: token, Value: cookieValue})
+
+
+	cookie, err := request.Cookie(token)
+	require.NoError(t, err)
+	require.NotNil(t, cookie)
+	require.NotEqual(t, cookie.Value, "")
+	require.Equal(t, cookie.Value, cookieValue)
+
+	mockRedis.EXPECT().DeleteSession(request.Context(), gomock.Eq(cookie.Value)).Return(nil)
+
+	err = server.signOut(recorder, request)
+	require.NoError(t, err)
+	require.Nil(t, err)
+}
+
+func Test_RefreshTokens(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	db, _, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatal(err)
+	}
+	client := redis.NewClient(&redis.Options{
+		Addr: mr.Addr(),
+	})
+
+	mockStorage := mockstore.NewMockStorage(ctrl)
+	mockRedis := mockstore.NewMockRedisStorage(ctrl)
+	server := NewJSONApiServer("", db, client, mockStorage, mockRedis)
+
+	req := &types.RefreshRequest{
+		RefreshToken: "cookieValue",
+	}
+
+	buffer, err := utils.AnyToBytesBuffer(req)
+	require.NoError(t, err)
+	require.NotNil(t, buffer)
+	require.Nil(t, err)
+
+	request := httptest.NewRequest(http.MethodPost, "/account/refresh", buffer)
+	recorder := httptest.NewRecorder()
+	uid := uuid.New()
+	mockRedis.EXPECT().GetUserID(request.Context(), req.RefreshToken).Return(uid, nil).AnyTimes()
+
+	account := &types.Account{
+		ID:               uid,
+		FirstName:        "Pasha1",
+		LastName:         "volkov1",
+		CardNumber:       "4444444444444444",
+		CardExpiryMonth:  "12",
+		CardExpiryYear:   "24",
+		CardSecurityCode: "924",
+		Balance:          0,
+		BlockedMoney:     0,
+		Statement:        []string{},
+		CreatedAt:        time.Now(),
+	}
+
+	mockStorage.EXPECT().GetAccountByID(request.Context(), uid).Return(account, nil).AnyTimes()
+
+	token := "refresh-token"
+	sess := &types.Session{
+		UserID: uid,
+	}
+	mockRedis.EXPECT().CreateSession(request.Context(), gomock.Eq(sess), 86400).Return(token, nil)
+
+	request.AddCookie(&http.Cookie{Name: token, Value: req.RefreshToken})
+
+	cookie, err := request.Cookie(token)
+	require.NoError(t, err)
+	require.NotNil(t, cookie)
+	require.NotEqual(t, cookie.Value, "")
+	require.Equal(t, cookie.Value, req.RefreshToken)
+
+	err = server.refreshTokens(recorder, request)
+	require.NoError(t, err)
+	require.Nil(t, err)
 }
 
 func Test_GetAccount(t *testing.T) {
@@ -78,7 +270,7 @@ func Test_GetAccount(t *testing.T) {
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
-	server := NewJSONApiServer("", db, nil, mockStorage)
+	server := NewJSONApiServer("", db, nil, mockStorage, nil)
 
 	request := httptest.NewRequest(http.MethodGet, "/account", nil)
 	recorder := httptest.NewRecorder()
@@ -144,7 +336,7 @@ func Test_GetAccountByID(t *testing.T) {
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
-	server := NewJSONApiServer("", db, nil, mockStorage)
+	server := NewJSONApiServer("", db, nil, mockStorage, nil)
 	request := httptest.NewRequest(http.MethodGet, "/accounе/{id}", nil)
 	recorder := httptest.NewRecorder()
 	uid := uuid.New()
@@ -182,7 +374,7 @@ func Test_UpdateAccount(t *testing.T) {
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
-	server := NewJSONApiServer("", db, nil, mockStorage)
+	server := NewJSONApiServer("", db, nil, mockStorage, nil)
 	reqUp := &types.RequestUpdate{
 		FirstName:        "Pasha1",
 		LastName:         "volkov1",
@@ -236,7 +428,7 @@ func Test_DeleteAccount(t *testing.T) {
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
-	server := NewJSONApiServer("", db, nil, mockStorage)
+	server := NewJSONApiServer("", db, nil, mockStorage, nil)
 
 	request := httptest.NewRequest(http.MethodDelete, "/account/{id}", nil)
 	recorder := httptest.NewRecorder()
@@ -262,7 +454,7 @@ func Test_DepositAccount(t *testing.T) {
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
-	server := NewJSONApiServer("", db, nil, mockStorage)
+	server := NewJSONApiServer("", db, nil, mockStorage, nil)
 	reqDep := &types.RequestDeposit{
 		CardNumber: "4444444444424323",
 		Balance:    44,
@@ -322,7 +514,7 @@ func Test_GetStatemetn(t *testing.T) {
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
-	server := NewJSONApiServer("", db, nil, mockStorage)
+	server := NewJSONApiServer("", db, nil, mockStorage, nil)
 	request := httptest.NewRequest(http.MethodGet, "/accounе/statement/{id}", nil)
 	recorder := httptest.NewRecorder()
 	uid := uuid.New()
