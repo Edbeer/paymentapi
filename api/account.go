@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// Create account handler
 func (s *JSONApiServer) createAccount(w http.ResponseWriter, r *http.Request) error {
 	req := &types.RequestCreate{}
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
@@ -52,7 +53,7 @@ func (s *JSONApiServer) createAccount(w http.ResponseWriter, r *http.Request) er
 	return WriteJSON(w, http.StatusOK, account)
 }
 
-// get all accounts
+// get all accounts handler
 func (s *JSONApiServer) getAccount(w http.ResponseWriter, r *http.Request) error {
 	accounts, err := s.storage.GetAccount(r.Context())
 	if err != nil {
@@ -61,6 +62,7 @@ func (s *JSONApiServer) getAccount(w http.ResponseWriter, r *http.Request) error
 	return WriteJSON(w, http.StatusOK, accounts)
 }
 
+// get account by id handler
 func (s *JSONApiServer) getAccountByID(w http.ResponseWriter, r *http.Request) error {
 	uuid, err := GetUUID(r)
 	if err != nil {
@@ -73,6 +75,7 @@ func (s *JSONApiServer) getAccountByID(w http.ResponseWriter, r *http.Request) e
 	return WriteJSON(w, http.StatusOK, account)
 }
 
+// update account handler
 func (s *JSONApiServer) updateAccount(w http.ResponseWriter, r *http.Request) error {
 	uuid, err := GetUUID(r)
 	if err != nil {
@@ -94,6 +97,7 @@ func (s *JSONApiServer) updateAccount(w http.ResponseWriter, r *http.Request) er
 	return WriteJSON(w, http.StatusOK, account)
 }
 
+// delete account handler
 func (s *JSONApiServer) deleteAccount(w http.ResponseWriter, r *http.Request) error {
 	uuid, err := GetUUID(r)
 	if err != nil {
@@ -105,6 +109,7 @@ func (s *JSONApiServer) deleteAccount(w http.ResponseWriter, r *http.Request) er
 	return WriteJSON(w, http.StatusOK, "account was deleted")
 }
 
+// deposit account handler
 func (s *JSONApiServer) depositAccount(w http.ResponseWriter, r *http.Request) error {
 	reqDep := &types.RequestDeposit{}
 	if err := json.NewDecoder(r.Body).Decode(reqDep); err != nil {
@@ -128,6 +133,7 @@ func (s *JSONApiServer) depositAccount(w http.ResponseWriter, r *http.Request) e
 	return WriteJSON(w, http.StatusOK, updatedAccount)
 }
 
+// get statement handler
 func (s *JSONApiServer) getStatement(w http.ResponseWriter, r *http.Request) error {
 	uuid, err := GetUUID(r)
 	if err != nil {
@@ -140,6 +146,7 @@ func (s *JSONApiServer) getStatement(w http.ResponseWriter, r *http.Request) err
 	return WriteJSON(w, http.StatusOK, statement)
 }
 
+// sign-in handler
 func (s *JSONApiServer) signIn(w http.ResponseWriter, r *http.Request) error {
 	req := &types.LoginRequest{}
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
@@ -161,6 +168,9 @@ func (s *JSONApiServer) signIn(w http.ResponseWriter, r *http.Request) error {
 	refreshToken, err := s.redisStorage.CreateSession(r.Context(), &types.Session{
 		UserID: account.ID,
 	}, 86400)
+	if err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
 
 	// cookie
 	cookie := &http.Cookie{
@@ -178,6 +188,7 @@ func (s *JSONApiServer) signIn(w http.ResponseWriter, r *http.Request) error {
 	return WriteJSON(w, http.StatusOK, account)
 }
 
+// sign-out handler
 func (s *JSONApiServer) signOut(w http.ResponseWriter, r *http.Request) error {
 	cookie, err := r.Cookie("refresh-token")
 	if err != nil {
@@ -192,6 +203,7 @@ func (s *JSONApiServer) signOut(w http.ResponseWriter, r *http.Request) error {
 	return WriteJSON(w, http.StatusOK, "LogOut")
 }
 
+// refresh tokens handler
 func (s *JSONApiServer) refreshTokens(w http.ResponseWriter, r *http.Request) error {
 	req := &types.RefreshRequest{}
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
@@ -218,7 +230,10 @@ func (s *JSONApiServer) refreshTokens(w http.ResponseWriter, r *http.Request) er
 	refreshToken, err := s.redisStorage.CreateSession(r.Context(), &types.Session{
 		UserID: account.ID,
 	}, 86400)
-
+	if err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
+	
 	// cookie
 	cookie := &http.Cookie{
 		Name:       "refresh-token",

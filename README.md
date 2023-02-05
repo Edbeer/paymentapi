@@ -97,7 +97,7 @@ Responce:
 }
 ```
 
-## Capture payment
+## Cancel payment
 Create payment ENDPOINT:
 ```
 POST HTTP://localhost:8080/payment/cancel/{id} // auth payment id

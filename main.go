@@ -17,9 +17,6 @@ import (
 )
 
 func main() {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
 	db, err := psql.NewPostgresDB()
 	if err != nil {
 		log.Fatal(err)
@@ -42,10 +39,10 @@ func main() {
 	quitCh := make(chan os.Signal, 1)
 	signal.Notify(quitCh, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
-	select {
-	case signal := <- quitCh:
-		log.Println(signal)
-	}
+	<- quitCh
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
 	s.Server.Shutdown(ctx)
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// Postgres storage interface
 type Storage interface {
 	CreateAccount(ctx context.Context, reqAcc *types.RequestCreate) (*types.Account, error)
 	GetAccount(ctx context.Context) ([]*types.Account, error)
@@ -29,12 +30,14 @@ type Storage interface {
 	UpdateStatement(ctx context.Context, tx *sql.Tx, id, paymentId uuid.UUID) (*types.Account, error)
 }
 
+// Redis storage interface
 type RedisStorage interface {
 	CreateSession(ctx context.Context, session *types.Session, expire int) (string, error)
 	GetUserID(ctx context.Context, refreshToken string) (uuid.UUID, error)
 	DeleteSession(ctx context.Context, refreshToken string) error
 }
 
+// Server
 type JSONApiServer struct {
 	storage      Storage
 	redisStorage RedisStorage
@@ -43,6 +46,7 @@ type JSONApiServer struct {
 	redis        *redis.Client
 }
 
+// Constructor
 func NewJSONApiServer(listenAddr string, db *sql.DB, redis *redis.Client, storage Storage, redisStorage RedisStorage) *JSONApiServer {
 	return &JSONApiServer{
 		db:      db,
