@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Edbeer/paymentapi/config"
 	"github.com/Edbeer/paymentapi/types"
 	"github.com/go-redis/redis/v9"
 	"github.com/google/uuid"
@@ -39,6 +40,7 @@ type RedisStorage interface {
 
 // Server
 type JSONApiServer struct {
+	config       *config.Config
 	storage      Storage
 	redisStorage RedisStorage
 	Server       *http.Server
@@ -47,17 +49,17 @@ type JSONApiServer struct {
 }
 
 // Constructor
-func NewJSONApiServer(listenAddr string, db *sql.DB, redis *redis.Client, storage Storage, redisStorage RedisStorage) *JSONApiServer {
+func NewJSONApiServer(config *config.Config, db *sql.DB, redis *redis.Client, storage Storage, redisStorage RedisStorage) *JSONApiServer {
 	return &JSONApiServer{
-		db:      db,
-		redis:   redis,
-		storage: storage,
+		db:           db,
+		redis:        redis,
+		storage:      storage,
 		redisStorage: redisStorage,
 		Server: &http.Server{
-			Addr:         listenAddr,
-			ReadTimeout:  5 * time.Second,
-			WriteTimeout: 10 * time.Second,
-			IdleTimeout:  120 * time.Second,
+			Addr:         config.Server.Port,
+			ReadTimeout:  time.Duration(config.Server.ReadTimeout) * time.Second,
+			WriteTimeout: time.Duration(config.Server.WriteTimeout) * time.Second,
+			IdleTimeout:  time.Duration(config.Server.IdleTimeout) * time.Second,
 		},
 	}
 }

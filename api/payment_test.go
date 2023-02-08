@@ -6,13 +6,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Edbeer/paymentapi/types"
+	"github.com/DATA-DOG/go-sqlmock"
 	mockstore "github.com/Edbeer/paymentapi/api/mock"
+	"github.com/Edbeer/paymentapi/config"
 	"github.com/Edbeer/paymentapi/pkg/utils"
+	"github.com/Edbeer/paymentapi/types"
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
-	"github.com/DATA-DOG/go-sqlmock"
 )
 
 func Test_CreatePayment(t *testing.T) {
@@ -27,8 +28,8 @@ func Test_CreatePayment(t *testing.T) {
 
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
-
-	server := NewJSONApiServer("", db, nil, mockStorage, nil)
+	config := &config.Config{}
+	server := NewJSONApiServer(config, db, nil, mockStorage, nil)
 
 	uid := uuid.New()
 	reqPay := &types.PaymentRequest{
@@ -220,8 +221,8 @@ func Test_CapturePayment(t *testing.T) {
 	defer db.Close()
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
-
-	server := NewJSONApiServer("", db, nil, mockStorage, nil)
+	config := &config.Config{}
+	server := NewJSONApiServer(config, db, nil, mockStorage, nil)
 	pid := uuid.New()
 	reqPaid := &types.PaidRequest{
 		OrderId:   "1",
@@ -370,8 +371,8 @@ func Test_RefundPayment(t *testing.T) {
 	defer db.Close()
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
-
-	server := NewJSONApiServer("", db, nil, mockStorage, nil)
+	config := &config.Config{}
+	server := NewJSONApiServer(config, db, nil, mockStorage, nil)
 	pid := uuid.New()
 	reqPaid := &types.PaidRequest{
 		OrderId:   "1",
@@ -519,8 +520,8 @@ func Test_CancelPaymen(t *testing.T) {
 	defer db.Close()
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
-
-	server := NewJSONApiServer("", db, nil, mockStorage, nil)
+	config := &config.Config{}
+	server := NewJSONApiServer(config, db, nil, mockStorage, nil)
 	pid := uuid.New()
 	reqPaid := &types.PaidRequest{
 		OrderId:   "1",

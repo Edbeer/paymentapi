@@ -4,3 +4,4 @@ pgdata
 .vscode
 dump.rdb
 todo.txt
+.env

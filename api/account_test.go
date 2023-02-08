@@ -8,6 +8,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	mockstore "github.com/Edbeer/paymentapi/api/mock"
+	"github.com/Edbeer/paymentapi/config"
 	"github.com/Edbeer/paymentapi/pkg/utils"
 	"github.com/Edbeer/paymentapi/types"
 	"github.com/alicebob/miniredis"
@@ -37,7 +38,9 @@ func Test_CreateAccount(t *testing.T) {
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
 	mockRedis := mockstore.NewMockRedisStorage(ctrl)
-	server := NewJSONApiServer("", db, client, mockStorage, mockRedis)
+
+	config := &config.Config{}
+	server := NewJSONApiServer(config, db, client, mockStorage, mockRedis)
 	req := &types.RequestCreate{
 		FirstName:        "Pasha1",
 		LastName:         "volkov1",
@@ -102,7 +105,9 @@ func Test_SignIn(t *testing.T) {
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
 	mockRedis := mockstore.NewMockRedisStorage(ctrl)
-	server := NewJSONApiServer("", db, client, mockStorage, mockRedis)
+
+	config := &config.Config{}
+	server := NewJSONApiServer(config, db, client, mockStorage, mockRedis)
 
 	req := &types.LoginRequest{
 		ID: uuid.New(),
@@ -163,7 +168,9 @@ func Test_SignOut(t *testing.T) {
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
 	mockRedis := mockstore.NewMockRedisStorage(ctrl)
-	server := NewJSONApiServer("", db, client, mockStorage, mockRedis)
+
+	config := &config.Config{}
+	server := NewJSONApiServer(config, db, client, mockStorage, mockRedis)
 
 	request := httptest.NewRequest(http.MethodPost, "/account/sign-out", nil)
 	recorder := httptest.NewRecorder()
@@ -207,7 +214,9 @@ func Test_RefreshTokens(t *testing.T) {
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
 	mockRedis := mockstore.NewMockRedisStorage(ctrl)
-	server := NewJSONApiServer("", db, client, mockStorage, mockRedis)
+	config := &config.Config{}
+	
+	server := NewJSONApiServer(config, db, client, mockStorage, mockRedis)
 
 	req := &types.RefreshRequest{
 		RefreshToken: "cookieValue",
@@ -269,8 +278,8 @@ func Test_GetAccount(t *testing.T) {
 	defer db.Close()
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
-
-	server := NewJSONApiServer("", db, nil, mockStorage, nil)
+	config := &config.Config{}
+	server := NewJSONApiServer(config, db, nil, mockStorage, nil)
 
 	request := httptest.NewRequest(http.MethodGet, "/account", nil)
 	recorder := httptest.NewRecorder()
@@ -336,7 +345,8 @@ func Test_GetAccountByID(t *testing.T) {
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
-	server := NewJSONApiServer("", db, nil, mockStorage, nil)
+	config := &config.Config{}
+	server := NewJSONApiServer(config, db, nil, mockStorage, nil)
 	request := httptest.NewRequest(http.MethodGet, "/accounе/{id}", nil)
 	recorder := httptest.NewRecorder()
 	uid := uuid.New()
@@ -374,7 +384,8 @@ func Test_UpdateAccount(t *testing.T) {
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
-	server := NewJSONApiServer("", db, nil, mockStorage, nil)
+	config := &config.Config{}
+	server := NewJSONApiServer(config, db, nil, mockStorage, nil)
 	reqUp := &types.RequestUpdate{
 		FirstName:        "Pasha1",
 		LastName:         "volkov1",
@@ -427,8 +438,8 @@ func Test_DeleteAccount(t *testing.T) {
 	defer db.Close()
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
-
-	server := NewJSONApiServer("", db, nil, mockStorage, nil)
+	config := &config.Config{}
+	server := NewJSONApiServer(config, db, nil, mockStorage, nil)
 
 	request := httptest.NewRequest(http.MethodDelete, "/account/{id}", nil)
 	recorder := httptest.NewRecorder()
@@ -453,8 +464,8 @@ func Test_DepositAccount(t *testing.T) {
 	defer db.Close()
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
-
-	server := NewJSONApiServer("", db, nil, mockStorage, nil)
+	config := &config.Config{}
+	server := NewJSONApiServer(config, db, nil, mockStorage, nil)
 	reqDep := &types.RequestDeposit{
 		CardNumber: "4444444444424323",
 		Balance:    44,
@@ -513,8 +524,8 @@ func Test_GetStatemetn(t *testing.T) {
 	defer db.Close()
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
-
-	server := NewJSONApiServer("", db, nil, mockStorage, nil)
+	config := &config.Config{}
+	server := NewJSONApiServer(config, db, nil, mockStorage, nil)
 	request := httptest.NewRequest(http.MethodGet, "/accounе/statement/{id}", nil)
 	recorder := httptest.NewRecorder()
 	uid := uuid.New()

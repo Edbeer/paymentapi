@@ -16,7 +16,7 @@ func CreateJWT(account *types.Account) (string, error) {
 		"expire_at": 15000,
 	})
 
-	tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+	tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET_KEY")))
 	if err != nil {
 		return "", err
 	}
@@ -26,7 +26,7 @@ func CreateJWT(account *types.Account) (string, error) {
 
 // Validate JWT
 func ValidateJWT(tokenString string) (*jwt.Token, error) {
-	secret := os.Getenv("JWT_SECRET")
+	secret := os.Getenv("JWT_SECRET_KEY")
 	return jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		// Don't forget to validate the alg is what you expect:
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {

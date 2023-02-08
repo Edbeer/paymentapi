@@ -6,8 +6,8 @@ services:
     build:
       dockerfile: Dockerfile
     command: ./wait-for-postgres.sh paydb ./bin/api
-    ports:
-      - "8080:8080"
+    env_file:
+      - .env
     environment:
       - POSTGRES_PASSWORD=postgres
     depends_on:
@@ -22,11 +22,9 @@ services:
     container_name: paydb
     ports:
       - "5432:5432"
+    env_file:
+      - .env
     environment:
-      - POSTGRES_HOST=paydb
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=paydb
       - PGDATA = "/var/lib/postgresql/data/pgdata"
     volumes:
       - ./migrations/000001_paymentdb.up.sql:/docker-entrypoint-initdb.d/initdb.sql
