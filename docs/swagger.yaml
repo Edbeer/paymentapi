@@ -1,0 +1,609 @@
+definitions:
+  api.ApiError:
+    properties:
+      error:
+        type: string
+    type: object
+  types.Account:
+    properties:
+      balance:
+        type: integer
+      blocked_money:
+        type: integer
+      card_expiry_month:
+        type: string
+      card_expiry_year:
+        type: string
+      card_number:
+        type: string
+      card_security_code:
+        type: string
+      created_at:
+        type: string
+      first_name:
+        type: string
+      id:
+        type: string
+      last_name:
+        type: string
+      statement:
+        items:
+          type: string
+        type: array
+    type: object
+  types.LoginRequest:
+    properties:
+      id:
+        type: string
+    type: object
+  types.PaidRequest:
+    properties:
+      amount:
+        type: integer
+      operation:
+        type: string
+      order_id:
+        type: string
+      payment_id:
+        type: string
+    type: object
+  types.PaymentRequest:
+    properties:
+      amount:
+        type: integer
+      card_expiry_month:
+        type: string
+      card_expiry_year:
+        type: string
+      card_number:
+        type: string
+      card_security_code:
+        type: string
+      currency:
+        type: string
+      id:
+        type: string
+      order_id:
+        type: string
+    type: object
+  types.PaymentResponse:
+    properties:
+      id:
+        type: string
+      status:
+        type: string
+    type: object
+  types.RefreshRequest:
+    properties:
+      refresh_token:
+        type: string
+    type: object
+  types.RefreshResponse:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+    type: object
+  types.RequestCreate:
+    properties:
+      card_expiry_month:
+        type: string
+      card_expiry_year:
+        type: string
+      card_number:
+        type: string
+      card_security_code:
+        type: string
+      first_name:
+        type: string
+      last_name:
+        type: string
+    type: object
+  types.RequestDeposit:
+    properties:
+      balance:
+        type: integer
+      card_number:
+        type: string
+    type: object
+  types.RequestUpdate:
+    properties:
+      card_expiry_month:
+        type: string
+      card_expiry_year:
+        type: string
+      card_number:
+        type: string
+      card_security_code:
+        type: string
+      first_name:
+        type: string
+      last_name:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: Simple payment system
+  title: Payment Application
+  version: "1.0"
+paths:
+  /account:
+    get:
+      description: get all accounts, returns accounts
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/types.Account'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ApiError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ApiError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ApiError'
+      summary: Get all accounts
+      tags:
+      - Account
+    post:
+      consumes:
+      - application/json
+      description: register new account, returns account
+      parameters:
+      - description: create account info
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/types.RequestCreate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.Account'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ApiError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ApiError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ApiError'
+      summary: Create new account
+      tags:
+      - Account
+  /account/{id}:
+    delete:
+      description: delete account, returns status
+      parameters:
+      - description: delete account info
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: integer
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ApiError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ApiError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ApiError'
+      summary: Delete account
+      tags:
+      - Account
+    get:
+      description: get account by id, returns account
+      parameters:
+      - description: get account by id info
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.Account'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ApiError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ApiError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ApiError'
+      summary: Get account by id
+      tags:
+      - Account
+    put:
+      consumes:
+      - application/json
+      description: update account, returns updated account
+      parameters:
+      - description: update account info
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: update account info
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/types.RequestUpdate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.Account'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ApiError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ApiError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ApiError'
+      summary: Update account
+      tags:
+      - Account
+  /account/deposit:
+    post:
+      consumes:
+      - application/json
+      description: deposit money to account, returns account
+      parameters:
+      - description: deposit account info
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/types.RequestDeposit'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.Account'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ApiError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ApiError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ApiError'
+      summary: Deposit money
+      tags:
+      - Account
+  /account/refresh:
+    post:
+      consumes:
+      - application/json
+      description: refresh access and refresh tokens, returns tokens
+      parameters:
+      - description: refresh tokens account info
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/types.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.RefreshResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ApiError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ApiError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ApiError'
+      summary: Refresh tokens
+      tags:
+      - Account
+  /account/sign-in:
+    post:
+      consumes:
+      - application/json
+      description: log in to your account, returns account
+      parameters:
+      - description: login account info
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/types.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.Account'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ApiError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ApiError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ApiError'
+      summary: Login
+      tags:
+      - Account
+  /account/sign-out:
+    post:
+      description: log out of your account, returns status
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: integer
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ApiError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ApiError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ApiError'
+      summary: Logout
+      tags:
+      - Account
+  /account/statement/{id}:
+    get:
+      description: get account statement, returns statement
+      parameters:
+      - description: get statement info
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.Account'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ApiError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ApiError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ApiError'
+      summary: Get account statement
+      tags:
+      - Account
+  /payment/auth:
+    post:
+      consumes:
+      - application/json
+      description: 'Create payment: Acceptance of payment'
+      parameters:
+      - description: create payment info
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: create payment info
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/types.PaymentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.PaymentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ApiError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ApiError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ApiError'
+      summary: Create payment
+      tags:
+      - Payment
+  /payment/cancel/{id}:
+    post:
+      consumes:
+      - application/json
+      description: 'Cancel payment: cancel authorization payment'
+      parameters:
+      - description: cancel payment info
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: cancel payment info
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/types.PaidRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.PaymentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ApiError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ApiError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ApiError'
+      summary: Cancel payment
+      tags:
+      - Payment
+  /payment/capture/{id}:
+    post:
+      consumes:
+      - application/json
+      description: 'Capture payment: Successful payment'
+      parameters:
+      - description: capture payment info
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: capture payment info
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/types.PaidRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.PaymentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ApiError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ApiError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ApiError'
+      summary: Capture payment
+      tags:
+      - Payment
+  /payment/refund/{id}:
+    post:
+      consumes:
+      - application/json
+      description: 'Refund: Refunded payment, if there is a refund'
+      parameters:
+      - description: refund payment info
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: refund payment info
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/types.PaidRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.PaymentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ApiError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ApiError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ApiError'
+      summary: Refund payment
+      tags:
+      - Payment
+securityDefinitions:
+  "":
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

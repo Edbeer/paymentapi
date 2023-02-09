@@ -9,7 +9,19 @@ import (
 	"github.com/google/uuid"
 )
 
-// Create payment: Acceptance of payment
+// createPayment godoc
+// @Summary Create payment
+// @Description Create payment: Acceptance of payment
+// @Tags Payment
+// @Accept json
+// @Produce json
+// @Param id path string true "create payment info"
+// @Param input body types.PaymentRequest true "create payment info"
+// @Success 200 {object} types.PaymentResponse
+// @Failure 400  {object}  api.ApiError
+// @Failure 404  {object}  api.ApiError
+// @Failure 500  {object}  api.ApiError
+// @Router /payment/auth [post]
 func (s *JSONApiServer) createPayment(w http.ResponseWriter, r *http.Request) error {
 	// read body request
 	reqPay := &types.PaymentRequest{}
@@ -142,7 +154,19 @@ func (s *JSONApiServer) createPayment(w http.ResponseWriter, r *http.Request) er
 	})
 }
 
-// Capture payment: Successful payment
+// capturePayment godoc
+// @Summary Capture payment
+// @Description Capture payment: Successful payment
+// @Tags Payment
+// @Accept json
+// @Produce json
+// @Param id path string true "capture payment info"
+// @Param input body types.PaidRequest true "capture payment info"
+// @Success 200 {object} types.PaymentResponse
+// @Failure 400  {object}  api.ApiError
+// @Failure 404  {object}  api.ApiError
+// @Failure 500  {object}  api.ApiError
+// @Router /payment/capture/{id} [post]
 func (s *JSONApiServer) capturePayment(w http.ResponseWriter, r *http.Request) error {
 	reqPaid := &types.PaidRequest{}
 	if err := json.NewDecoder(r.Body).Decode(reqPaid); err != nil {
@@ -256,7 +280,19 @@ func (s *JSONApiServer) capturePayment(w http.ResponseWriter, r *http.Request) e
 	})
 }
 
-// Refund: Refunded payment, if there is a refund
+// refundPayment godoc
+// @Summary Refund payment
+// @Description Refund: Refunded payment, if there is a refund
+// @Tags Payment
+// @Accept json
+// @Produce json
+// @Param id path string true "refund payment info"
+// @Param input body types.PaidRequest true "refund payment info"
+// @Success 200 {object} types.PaymentResponse
+// @Failure 400  {object}  api.ApiError
+// @Failure 404  {object}  api.ApiError
+// @Failure 500  {object}  api.ApiError
+// @Router /payment/refund/{id} [post]
 func (s *JSONApiServer) refundPayment(w http.ResponseWriter, r *http.Request) error {
 	reqPaid := &types.PaidRequest{}
 	if err := json.NewDecoder(r.Body).Decode(reqPaid); err != nil {
@@ -370,7 +406,19 @@ func (s *JSONApiServer) refundPayment(w http.ResponseWriter, r *http.Request) er
 	})
 }
 
-// cancel payment: cancel authorization payment
+// cancelPayment godoc
+// @Summary Cancel payment
+// @Description Cancel payment: cancel authorization payment
+// @Tags Payment
+// @Accept json
+// @Produce json
+// @Param id path string true "cancel payment info"
+// @Param input body types.PaidRequest true "cancel payment info"
+// @Success 200 {object} types.PaymentResponse
+// @Failure 400  {object}  api.ApiError
+// @Failure 404  {object}  api.ApiError
+// @Failure 500  {object}  api.ApiError
+// @Router /payment/cancel/{id} [post]
 func (s *JSONApiServer) cancelPayment(w http.ResponseWriter, r *http.Request) error {
 	// payment id
 	paymentId, err := GetUUID(r)

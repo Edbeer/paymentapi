@@ -6,6 +6,8 @@ services:
     build:
       dockerfile: Dockerfile
     command: ./wait-for-postgres.sh paydb ./bin/api
+    ports:
+      - 8080:8080
     env_file:
       - .env
     environment:

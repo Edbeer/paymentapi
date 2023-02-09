@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/Edbeer/paymentapi/types"
-	"github.com/go-redis/redis/v9"
+	"github.com/redis/go-redis/v9"
 	"github.com/google/uuid"
 )
 
@@ -33,7 +33,6 @@ func (s *RedisStorage) CreateSession(ctx context.Context, session *types.Session
 	if err := s.redis.Set(ctx, session.RefreshToken, sessionBytes, time.Second*time.Duration(expire)).Err(); err != nil {
 		return "", err
 	}
-
 	return session.RefreshToken, nil
 }
 

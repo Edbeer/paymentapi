@@ -7,7 +7,7 @@ import (
 
 	"github.com/Edbeer/paymentapi/types"
 	"github.com/alicebob/miniredis"
-	"github.com/go-redis/redis/v9"
+	"github.com/redis/go-redis/v9"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
@@ -39,6 +39,7 @@ func TestRedis_CreateSession(t *testing.T) {
 		s, err := sessionRedisStorage.CreateSession(context.Background(), session, 10)
 		require.NoError(t, err)
 		require.NotEqual(t, s, "")
+		require.Equal(t, s, session.RefreshToken)
 	})
 }
 

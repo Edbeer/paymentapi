@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/Edbeer/paymentapi/pkg/utils"
@@ -11,7 +10,18 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// Create account handler
+// createAccount godoc
+// @Summary Create new account
+// @Description register new account, returns account
+// @Tags Account
+// @Accept json
+// @Produce json
+// @Param input body types.RequestCreate true "create account info"
+// @Success 200 {object} types.Account
+// @Failure 400  {object}  api.ApiError
+// @Failure 404  {object}  api.ApiError
+// @Failure 500  {object}  api.ApiError
+// @Router /account [post]
 func (s *JSONApiServer) createAccount(w http.ResponseWriter, r *http.Request) error {
 	req := &types.RequestCreate{}
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
@@ -32,11 +42,13 @@ func (s *JSONApiServer) createAccount(w http.ResponseWriter, r *http.Request) er
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
 	w.Header().Add("x-jwt-token", tokenString)
-
 	// refreshToken
 	refreshToken, err := s.redisStorage.CreateSession(r.Context(), &types.Session{
 		UserID: account.ID,
 	}, 86400)
+	if err != nil {
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: "error"})
+	}
 	// cookie
 	cookie := &http.Cookie{
 		Name:       "refresh-token",
@@ -49,11 +61,20 @@ func (s *JSONApiServer) createAccount(w http.ResponseWriter, r *http.Request) er
 		SameSite:   0,
 	}
 	http.SetCookie(w, cookie)
-	fmt.Println(tokenString)
+
 	return WriteJSON(w, http.StatusOK, account)
 }
 
-// get all accounts handler
+// getAccount godoc
+// @Summary Get all accounts
+// @Description get all accounts, returns accounts
+// @Tags Account
+// @Produce json
+// @Success 200 {object} []types.Account
+// @Failure 400  {object}  api.ApiError
+// @Failure 404  {object}  api.ApiError
+// @Failure 500  {object}  api.ApiError
+// @Router /account [get]
 func (s *JSONApiServer) getAccount(w http.ResponseWriter, r *http.Request) error {
 	accounts, err := s.storage.GetAccount(r.Context())
 	if err != nil {
@@ -62,7 +83,17 @@ func (s *JSONApiServer) getAccount(w http.ResponseWriter, r *http.Request) error
 	return WriteJSON(w, http.StatusOK, accounts)
 }
 
-// get account by id handler
+// getAccountByID godoc
+// @Summary Get account by id
+// @Description get account by id, returns account
+// @Tags Account
+// @Produce json
+// @Param id path string true "get account by id info"
+// @Success 200 {object} types.Account
+// @Failure 400  {object}  api.ApiError
+// @Failure 404  {object}  api.ApiError
+// @Failure 500  {object}  api.ApiError
+// @Router /account/{id} [get]
 func (s *JSONApiServer) getAccountByID(w http.ResponseWriter, r *http.Request) error {
 	uuid, err := GetUUID(r)
 	if err != nil {
@@ -75,7 +106,19 @@ func (s *JSONApiServer) getAccountByID(w http.ResponseWriter, r *http.Request) e
 	return WriteJSON(w, http.StatusOK, account)
 }
 
-// update account handler
+// updateAccount godoc
+// @Summary Update account
+// @Description update account, returns updated account
+// @Tags Account
+// @Accept json
+// @Produce json
+// @Param id path string true "update account info"
+// @Param input body types.RequestUpdate true "update account info"
+// @Success 200 {object} types.Account
+// @Failure 400  {object}  api.ApiError
+// @Failure 404  {object}  api.ApiError
+// @Failure 500  {object}  api.ApiError
+// @Router /account/{id} [put]
 func (s *JSONApiServer) updateAccount(w http.ResponseWriter, r *http.Request) error {
 	uuid, err := GetUUID(r)
 	if err != nil {
@@ -97,7 +140,17 @@ func (s *JSONApiServer) updateAccount(w http.ResponseWriter, r *http.Request) er
 	return WriteJSON(w, http.StatusOK, account)
 }
 
-// delete account handler
+// deleteAccount godoc
+// @Summary Delete account
+// @Description delete account, returns status
+// @Tags Account
+// @Produce json
+// @Param id path string true "delete account info"
+// @Success 200 {integer} 200
+// @Failure 400  {object}  api.ApiError
+// @Failure 404  {object}  api.ApiError
+// @Failure 500  {object}  api.ApiError
+// @Router /account/{id} [delete]
 func (s *JSONApiServer) deleteAccount(w http.ResponseWriter, r *http.Request) error {
 	uuid, err := GetUUID(r)
 	if err != nil {
@@ -109,7 +162,18 @@ func (s *JSONApiServer) deleteAccount(w http.ResponseWriter, r *http.Request) er
 	return WriteJSON(w, http.StatusOK, "account was deleted")
 }
 
-// deposit account handler
+// depositAccount godoc
+// @Summary Deposit money
+// @Description deposit money to account, returns account
+// @Tags Account
+// @Accept json
+// @Produce json
+// @Param input body types.RequestDeposit true "deposit account info"
+// @Success 200 {object} types.Account
+// @Failure 400  {object}  api.ApiError
+// @Failure 404  {object}  api.ApiError
+// @Failure 500  {object}  api.ApiError
+// @Router /account/deposit [post]
 func (s *JSONApiServer) depositAccount(w http.ResponseWriter, r *http.Request) error {
 	reqDep := &types.RequestDeposit{}
 	if err := json.NewDecoder(r.Body).Decode(reqDep); err != nil {
@@ -133,7 +197,17 @@ func (s *JSONApiServer) depositAccount(w http.ResponseWriter, r *http.Request) e
 	return WriteJSON(w, http.StatusOK, updatedAccount)
 }
 
-// get statement handler
+// getStatement godoc
+// @Summary Get account statement
+// @Description get account statement, returns statement
+// @Tags Account
+// @Produce json
+// @Param id path string true "get statement info"
+// @Success 200 {object} types.Account.Statement
+// @Failure 400  {object}  api.ApiError
+// @Failure 404  {object}  api.ApiError
+// @Failure 500  {object}  api.ApiError
+// @Router /account/statement/{id} [get]
 func (s *JSONApiServer) getStatement(w http.ResponseWriter, r *http.Request) error {
 	uuid, err := GetUUID(r)
 	if err != nil {
@@ -146,7 +220,18 @@ func (s *JSONApiServer) getStatement(w http.ResponseWriter, r *http.Request) err
 	return WriteJSON(w, http.StatusOK, statement)
 }
 
-// sign-in handler
+// signIn godoc
+// @Summary Login
+// @Description log in to your account, returns account
+// @Tags Account
+// @Accept json
+// @Produce json
+// @Param input body types.LoginRequest true "login account info"
+// @Success 200 {object} types.Account
+// @Failure 400  {object}  api.ApiError
+// @Failure 404  {object}  api.ApiError
+// @Failure 500  {object}  api.ApiError
+// @Router /account/sign-in [post]
 func (s *JSONApiServer) signIn(w http.ResponseWriter, r *http.Request) error {
 	req := &types.LoginRequest{}
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
@@ -188,7 +273,16 @@ func (s *JSONApiServer) signIn(w http.ResponseWriter, r *http.Request) error {
 	return WriteJSON(w, http.StatusOK, account)
 }
 
-// sign-out handler
+// signOut godoc
+// @Summary Logout
+// @Description log out of your account, returns status
+// @Tags Account
+// @Produce json
+// @Success 200 {integer} 200
+// @Failure 400  {object}  api.ApiError
+// @Failure 404  {object}  api.ApiError
+// @Failure 500  {object}  api.ApiError
+// @Router /account/sign-out [post]
 func (s *JSONApiServer) signOut(w http.ResponseWriter, r *http.Request) error {
 	cookie, err := r.Cookie("refresh-token")
 	if err != nil {
@@ -198,12 +292,23 @@ func (s *JSONApiServer) signOut(w http.ResponseWriter, r *http.Request) error {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
 	if err := s.redisStorage.DeleteSession(r.Context(), cookie.Value); err != nil {
-		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})	
+		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
 	return WriteJSON(w, http.StatusOK, "LogOut")
 }
 
-// refresh tokens handler
+// refreshTokens godoc
+// @Summary Refresh tokens
+// @Description refresh access and refresh tokens, returns tokens
+// @Tags Account
+// @Accept json
+// @Produce json
+// @Param input body types.RefreshRequest true "refresh tokens account info"
+// @Success 200 {object} types.RefreshResponse
+// @Failure 400  {object}  api.ApiError
+// @Failure 404  {object}  api.ApiError
+// @Failure 500  {object}  api.ApiError
+// @Router /account/refresh [post]
 func (s *JSONApiServer) refreshTokens(w http.ResponseWriter, r *http.Request) error {
 	req := &types.RefreshRequest{}
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
@@ -233,7 +338,7 @@ func (s *JSONApiServer) refreshTokens(w http.ResponseWriter, r *http.Request) er
 	if err != nil {
 		return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 	}
-	
+
 	// cookie
 	cookie := &http.Cookie{
 		Name:       "refresh-token",

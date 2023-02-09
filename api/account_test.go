@@ -12,7 +12,7 @@ import (
 	"github.com/Edbeer/paymentapi/pkg/utils"
 	"github.com/Edbeer/paymentapi/types"
 	"github.com/alicebob/miniredis"
-	"github.com/go-redis/redis/v9"
+	"github.com/redis/go-redis/v9"
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"

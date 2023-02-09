@@ -10,9 +10,11 @@ import (
 
 	"github.com/Edbeer/paymentapi/config"
 	"github.com/Edbeer/paymentapi/types"
-	"github.com/go-redis/redis/v9"
+	"github.com/redis/go-redis/v9"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/swaggo/http-swagger"
+	_ "github.com/Edbeer/paymentapi/docs"
 )
 
 // Postgres storage interface
@@ -89,6 +91,9 @@ func (s *JSONApiServer) Run() {
 	// DELETE
 	deleteRouter := router.Methods(http.MethodDelete).Subrouter()
 	deleteRouter.HandleFunc("/account/{id}", AuthJWT(HTTPHandler(s.deleteAccount)))
+	// SWAGGER
+	router.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
+
 	s.Server.Handler = router
 	s.Server.ListenAndServe()
 }

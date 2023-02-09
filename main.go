@@ -17,6 +17,13 @@ import (
 	"github.com/Edbeer/paymentapi/pkg/db/redis"
 )
 
+// @title           Payment Application
+// @version         1.0
+// @description     Simple payment system
+
+// @securitydefinitions.apikey
+// @in header
+// @name Authorization
 func main() {
 	// init config
 	config := config.GetConfig()
