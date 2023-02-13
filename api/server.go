@@ -15,6 +15,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
+	"github.com/sirupsen/logrus"
 	"github.com/swaggo/http-swagger"
 )
 
@@ -49,15 +50,17 @@ type JSONApiServer struct {
 	Server       *http.Server
 	db           *sql.DB
 	redis        *redis.Client
+	logger       *logrus.Logger
 }
 
 // Constructor
-func NewJSONApiServer(config *config.Config, db *sql.DB, redis *redis.Client, storage Storage, redisStorage RedisStorage) *JSONApiServer {
+func NewJSONApiServer(config *config.Config, db *sql.DB, redis *redis.Client, storage Storage, redisStorage RedisStorage, logger *logrus.Logger) *JSONApiServer {
 	return &JSONApiServer{
 		db:           db,
 		redis:        redis,
 		storage:      storage,
 		redisStorage: redisStorage,
+		logger: logger,
 		Server: &http.Server{
 			Addr:         config.Server.Port,
 			ReadTimeout:  time.Duration(config.Server.ReadTimeout) * time.Second,
@@ -96,7 +99,7 @@ func (s *JSONApiServer) Run() {
 	router.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
 	// METRICS
 	router.Handle("/metrics", promhttp.Handler())
-	
+
 	s.Server.Handler = router
 	s.Server.ListenAndServe()
 }

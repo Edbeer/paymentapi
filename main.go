@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -12,13 +11,14 @@ import (
 	"github.com/Edbeer/paymentapi/config"
 	"github.com/Edbeer/paymentapi/storage/psql"
 	"github.com/Edbeer/paymentapi/storage/redis"
+	"github.com/sirupsen/logrus"
 
 	"github.com/Edbeer/paymentapi/pkg/db/psql"
 	"github.com/Edbeer/paymentapi/pkg/db/redis"
 
+	"github.com/opentracing/opentracing-go"
 	"github.com/uber/jaeger-client-go"
 	jConfig "github.com/uber/jaeger-client-go/config"
-	"github.com/opentracing/opentracing-go"
 	jLog "github.com/uber/jaeger-client-go/log"
 	"github.com/uber/jaeger-lib/metrics"
 )
@@ -33,7 +33,8 @@ import (
 func main() {
 	// init config
 	config := config.GetConfig()
-
+	// init logrus
+	log := logrus.New()
 	// init postgres
 	db, err := psql.NewPostgresDB(config)
 	if err != nil {
@@ -57,7 +58,7 @@ func main() {
 			Param: 10,
 		},
 		Reporter: &jConfig.ReporterConfig{
-			LogSpans:           true,
+			LogSpans:           false,
 			LocalAgentHostPort: "jaeger:6831",
 		},
 	}
@@ -77,7 +78,7 @@ func main() {
 
 	// init server
 	log.Println("init server")
-	s := api.NewJSONApiServer(config, db, redisClient, psql, redisStore)
+	s := api.NewJSONApiServer(config, db, redisClient, psql, redisStore, log)
 	go func() {
 		s.Run()
 	}()

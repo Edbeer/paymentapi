@@ -41,7 +41,7 @@ func Test_CreateAccount(t *testing.T) {
 	mockRedis := mockstore.NewMockRedisStorage(ctrl)
 
 	config := &config.Config{}
-	server := NewJSONApiServer(config, db, client, mockStorage, mockRedis)
+	server := NewJSONApiServer(config, db, client, mockStorage, mockRedis, nil)
 	req := &types.RequestCreate{
 		FirstName:        "Pasha1",
 		LastName:         "volkov1",
@@ -111,7 +111,7 @@ func Test_SignIn(t *testing.T) {
 	mockRedis := mockstore.NewMockRedisStorage(ctrl)
 
 	config := &config.Config{}
-	server := NewJSONApiServer(config, db, client, mockStorage, mockRedis)
+	server := NewJSONApiServer(config, db, client, mockStorage, mockRedis, nil)
 
 	req := &types.LoginRequest{
 		ID: uuid.New(),
@@ -176,7 +176,7 @@ func Test_SignOut(t *testing.T) {
 	mockRedis := mockstore.NewMockRedisStorage(ctrl)
 
 	config := &config.Config{}
-	server := NewJSONApiServer(config, db, client, mockStorage, mockRedis)
+	server := NewJSONApiServer(config, db, client, mockStorage, mockRedis, nil)
 
 	request := httptest.NewRequest(http.MethodPost, "/account/sign-out", nil)
 	span, ctxWithTrace := opentracing.StartSpanFromContext(request.Context(), "Account.signOut")
@@ -224,7 +224,7 @@ func Test_RefreshTokens(t *testing.T) {
 	mockRedis := mockstore.NewMockRedisStorage(ctrl)
 	config := &config.Config{}
 	
-	server := NewJSONApiServer(config, db, client, mockStorage, mockRedis)
+	server := NewJSONApiServer(config, db, client, mockStorage, mockRedis, nil)
 
 	req := &types.RefreshRequest{
 		RefreshToken: "cookieValue",
@@ -290,7 +290,7 @@ func Test_GetAccount(t *testing.T) {
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
 	config := &config.Config{}
-	server := NewJSONApiServer(config, db, nil, mockStorage, nil)
+	server := NewJSONApiServer(config, db, nil, mockStorage, nil, nil)
 
 	request := httptest.NewRequest(http.MethodGet, "/account", nil)
 	span, ctxWithTrace := opentracing.StartSpanFromContext(request.Context(), "Account.getAccount")
@@ -360,7 +360,7 @@ func Test_GetAccountByID(t *testing.T) {
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
 	config := &config.Config{}
-	server := NewJSONApiServer(config, db, nil, mockStorage, nil)
+	server := NewJSONApiServer(config, db, nil, mockStorage, nil, nil)
 	request := httptest.NewRequest(http.MethodGet, "/accounе/{id}", nil)
 	span, ctxWithTrace := opentracing.StartSpanFromContext(request.Context(), "Account.getAccountByID")
 	defer span.Finish()
@@ -402,7 +402,7 @@ func Test_UpdateAccount(t *testing.T) {
 	mockStorage := mockstore.NewMockStorage(ctrl)
 
 	config := &config.Config{}
-	server := NewJSONApiServer(config, db, nil, mockStorage, nil)
+	server := NewJSONApiServer(config, db, nil, mockStorage, nil, nil)
 	reqUp := &types.RequestUpdate{
 		FirstName:        "Pasha1",
 		LastName:         "volkov1",
@@ -459,7 +459,7 @@ func Test_DeleteAccount(t *testing.T) {
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
 	config := &config.Config{}
-	server := NewJSONApiServer(config, db, nil, mockStorage, nil)
+	server := NewJSONApiServer(config, db, nil, mockStorage, nil, nil)
 
 	request := httptest.NewRequest(http.MethodDelete, "/account/{id}", nil)
 	span, ctxWithTrace := opentracing.StartSpanFromContext(request.Context(), "Account.deleteAccount")
@@ -488,7 +488,7 @@ func Test_DepositAccount(t *testing.T) {
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
 	config := &config.Config{}
-	server := NewJSONApiServer(config, db, nil, mockStorage, nil)
+	server := NewJSONApiServer(config, db, nil, mockStorage, nil, nil)
 	reqDep := &types.RequestDeposit{
 		CardNumber: "4444444444424323",
 		Balance:    44,
@@ -551,7 +551,7 @@ func Test_GetStatement(t *testing.T) {
 
 	mockStorage := mockstore.NewMockStorage(ctrl)
 	config := &config.Config{}
-	server := NewJSONApiServer(config, db, nil, mockStorage, nil)
+	server := NewJSONApiServer(config, db, nil, mockStorage, nil, nil)
 	request := httptest.NewRequest(http.MethodGet, "/accounе/statement/{id}", nil)
 	span, ctxWithTrace := opentracing.StartSpanFromContext(request.Context(), "Account.getStatement")
 	defer span.Finish()
