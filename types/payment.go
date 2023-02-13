@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// TODO FIX order_id
 // Payment
 type Payment struct {
 	ID              uuid.UUID `json:"id"`
@@ -63,7 +62,6 @@ type PaidRequest struct {
 	Amount    uint64    `json:"amount"`
 }
 
-// TODO remove account id
 type PaymentRequest struct {
 	AccountId        uuid.UUID `json:"id"`
 	OrderId          string    `json:"order_id"`
@@ -75,7 +73,6 @@ type PaymentRequest struct {
 	CardSecurityCode string    `json:"card_security_code"`
 }
 
-// TODO auth code
 type PaymentResponse struct {
 	ID     uuid.UUID `json:"id"`
 	Status string    `json:"status"`

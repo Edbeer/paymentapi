@@ -8,10 +8,15 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Edbeer/paymentapi/config"
+	_ "github.com/Edbeer/paymentapi/docs"
 	"github.com/Edbeer/paymentapi/types"
-	"github.com/go-redis/redis/v9"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/redis/go-redis/v9"
+	"github.com/sirupsen/logrus"
+	"github.com/swaggo/http-swagger"
 )
 
 // Postgres storage interface
@@ -39,25 +44,28 @@ type RedisStorage interface {
 
 // Server
 type JSONApiServer struct {
+	config       *config.Config
 	storage      Storage
 	redisStorage RedisStorage
 	Server       *http.Server
 	db           *sql.DB
 	redis        *redis.Client
+	logger       *logrus.Logger
 }
 
 // Constructor
-func NewJSONApiServer(listenAddr string, db *sql.DB, redis *redis.Client, storage Storage, redisStorage RedisStorage) *JSONApiServer {
+func NewJSONApiServer(config *config.Config, db *sql.DB, redis *redis.Client, storage Storage, redisStorage RedisStorage, logger *logrus.Logger) *JSONApiServer {
 	return &JSONApiServer{
-		db:      db,
-		redis:   redis,
-		storage: storage,
+		db:           db,
+		redis:        redis,
+		storage:      storage,
 		redisStorage: redisStorage,
+		logger: logger,
 		Server: &http.Server{
-			Addr:         listenAddr,
-			ReadTimeout:  5 * time.Second,
-			WriteTimeout: 10 * time.Second,
-			IdleTimeout:  120 * time.Second,
+			Addr:         config.Server.Port,
+			ReadTimeout:  time.Duration(config.Server.ReadTimeout) * time.Second,
+			WriteTimeout: time.Duration(config.Server.WriteTimeout) * time.Second,
+			IdleTimeout:  time.Duration(config.Server.IdleTimeout) * time.Second,
 		},
 	}
 }
@@ -87,6 +95,11 @@ func (s *JSONApiServer) Run() {
 	// DELETE
 	deleteRouter := router.Methods(http.MethodDelete).Subrouter()
 	deleteRouter.HandleFunc("/account/{id}", AuthJWT(HTTPHandler(s.deleteAccount)))
+	// SWAGGER
+	router.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
+	// METRICS
+	router.Handle("/metrics", promhttp.Handler())
+
 	s.Server.Handler = router
 	s.Server.ListenAndServe()
 }
