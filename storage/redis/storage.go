@@ -8,8 +8,9 @@ import (
 	"time"
 
 	"github.com/Edbeer/paymentapi/types"
-	"github.com/redis/go-redis/v9"
 	"github.com/google/uuid"
+	"github.com/opentracing/opentracing-go"
+	"github.com/redis/go-redis/v9"
 )
 
 type RedisStorage struct {
@@ -24,6 +25,9 @@ func NewRedisStorage(redis  *redis.Client) *RedisStorage {
 
 // Add refresh token in redis
 func (s *RedisStorage) CreateSession(ctx context.Context, session *types.Session, expire int) (string, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "Redis.CreateSession")
+	defer span.Finish()
+	
 	session.RefreshToken = newRefreshToken()
 
 	sessionBytes, err := json.Marshal(&session)
@@ -38,6 +42,9 @@ func (s *RedisStorage) CreateSession(ctx context.Context, session *types.Session
 
 // Get user id from session
 func (s *RedisStorage) GetUserID(ctx context.Context, refreshToken string) (uuid.UUID, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "Redis.GetUserID")
+	defer span.Finish()
+
 	sessionBytes, err := s.redis.Get(ctx, refreshToken).Bytes()
 	if err != nil {
 		return uuid.Nil , err
@@ -52,6 +59,9 @@ func (s *RedisStorage) GetUserID(ctx context.Context, refreshToken string) (uuid
 
 // Delete session cookie
 func (s *RedisStorage) DeleteSession(ctx context.Context, refreshToken string) error {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "Redis.DeleteSession")
+	defer span.Finish()
+	
 	if err := s.redis.Del(ctx, refreshToken).Err(); err != nil {
 		return err
 	}

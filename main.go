@@ -15,6 +15,12 @@ import (
 
 	"github.com/Edbeer/paymentapi/pkg/db/psql"
 	"github.com/Edbeer/paymentapi/pkg/db/redis"
+
+	"github.com/uber/jaeger-client-go"
+	jConfig "github.com/uber/jaeger-client-go/config"
+	"github.com/opentracing/opentracing-go"
+	jLog "github.com/uber/jaeger-client-go/log"
+	"github.com/uber/jaeger-lib/metrics"
 )
 
 // @title           Payment Application
@@ -43,6 +49,32 @@ func main() {
 
 	psql := postgres.NewPostgresStorage(db)
 	redisStore := redisrepo.NewRedisStorage(redisClient)
+
+	jaegerCfgInstance := jConfig.Configuration{
+		ServiceName: "PAYMENT_API",
+		Sampler: &jConfig.SamplerConfig{
+			Type:  jaeger.SamplerTypeConst,
+			Param: 10,
+		},
+		Reporter: &jConfig.ReporterConfig{
+			LogSpans:           true,
+			LocalAgentHostPort: "jaeger:6831",
+		},
+	}
+
+	tracer, closer, err := jaegerCfgInstance.NewTracer(
+		jConfig.Logger(jLog.StdLogger),
+		jConfig.Metrics(metrics.NullFactory),
+	)
+	if err != nil {
+		log.Fatal("cannot create tracer", err)
+	}
+	log.Println("Jaeger connected")
+
+	opentracing.SetGlobalTracer(tracer)
+	defer closer.Close()
+	log.Println("Opentracing connected")
+
 	// init server
 	log.Println("init server")
 	s := api.NewJSONApiServer(config, db, redisClient, psql, redisStore)

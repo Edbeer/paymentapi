@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 	_ "github.com/lib/pq"
+	"github.com/opentracing/opentracing-go"
 )
 
 type PostgresStorage struct {
@@ -21,6 +22,9 @@ func NewPostgresStorage(db *sql.DB) *PostgresStorage {
 }
 
 func (s *PostgresStorage) CreateAccount(ctx context.Context, reqAcc *types.RequestCreate) (*types.Account, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "Psql.CreateAccount")
+	defer span.Finish()
+
 	query := `INSERT INTO account (first_name, 
 		last_name, card_number, card_expiry_month, 
 		card_expiry_year, card_security_code, 
@@ -55,6 +59,9 @@ func (s *PostgresStorage) CreateAccount(ctx context.Context, reqAcc *types.Reque
 }
 
 func (s *PostgresStorage) GetAccount(ctx context.Context) ([]*types.Account, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "Psql.GetAccount")
+	defer span.Finish()
+
 	query := `SELECT * FROM account`
 
 	rows, err := s.db.QueryContext(ctx, query)
@@ -81,6 +88,9 @@ func (s *PostgresStorage) GetAccount(ctx context.Context) ([]*types.Account, err
 }
 
 func (s *PostgresStorage) GetAccountByID(ctx context.Context, id uuid.UUID) (*types.Account, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "Psql.GetAccountByID")
+	defer span.Finish()
+	
 	query := `SELECT * FROM account 
 			WHERE id = $1`
 	acc := &types.Account{}
@@ -101,6 +111,9 @@ func (s *PostgresStorage) GetAccountByID(ctx context.Context, id uuid.UUID) (*ty
 }
 
 func (s *PostgresStorage) GetAccountByCard(ctx context.Context, card string) (*types.Account, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "Psql.GetAccountByCard")
+	defer span.Finish()
+	
 	query := `SELECT * FROM account WHERE card_number = $1`
 	acc := &types.Account{}
 	if err := s.db.QueryRowContext(
@@ -119,6 +132,9 @@ func (s *PostgresStorage) GetAccountByCard(ctx context.Context, card string) (*t
 }
 
 func (s *PostgresStorage) UpdateAccount(ctx context.Context, reqUp *types.RequestUpdate, id uuid.UUID) (*types.Account, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "Psql.UpdateAccount")
+	defer span.Finish()
+	
 	query := `UPDATE account
 	SET first_name = COALESCE(NULLIF($1, ''), first_name),
 		last_name = COALESCE(NULLIF($2, ''), last_name),
@@ -153,7 +169,9 @@ func (s *PostgresStorage) UpdateAccount(ctx context.Context, reqUp *types.Reques
 }
 
 func (s *PostgresStorage) UpdateStatement(ctx context.Context, tx *sql.Tx, id, paymentId uuid.UUID) (*types.Account, error) {
-	// TODO change id on card_number
+	span, ctx := opentracing.StartSpanFromContext(ctx, "Psql.UpdateStatement")
+	defer span.Finish()
+
 	query := `UPDATE account
 				SET statement = array_append(statement, $1)
 				WHERE id = $2
@@ -178,6 +196,9 @@ func (s *PostgresStorage) UpdateStatement(ctx context.Context, tx *sql.Tx, id, p
 }
 
 func (s *PostgresStorage) DeleteAccount(ctx context.Context, id uuid.UUID) error {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "Psql.DeleteAccount")
+	defer span.Finish()
+	
 	query := `DELETE FROM account WHERE id = $1`
 	_, err := s.db.ExecContext(ctx, query, id)
 	if err != nil {
@@ -187,6 +208,9 @@ func (s *PostgresStorage) DeleteAccount(ctx context.Context, id uuid.UUID) error
 }
 
 func (s *PostgresStorage) DepositAccount(ctx context.Context, reqDep *types.RequestDeposit) (*types.Account, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "Psql.DepositAccount")
+	defer span.Finish()
+	
 	query := `UPDATE account
 				SET balance = COALESCE(NULLIF($1, 0), balance)
 				WHERE card_number = $2
@@ -212,6 +236,9 @@ func (s *PostgresStorage) DepositAccount(ctx context.Context, reqDep *types.Requ
 }
 
 func (s *PostgresStorage) GetAccountStatement(ctx context.Context, id uuid.UUID) ([]string, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "Psql.GetAccountStatement")
+	defer span.Finish()
+	
 	query := `SELECT * FROM account WHERE id = $1`
 	acc := &types.Account{}
 
@@ -234,6 +261,9 @@ func (s *PostgresStorage) GetAccountStatement(ctx context.Context, id uuid.UUID)
 }
 
 func (s *PostgresStorage) SavePayment(ctx context.Context, tx *sql.Tx, payment *types.Payment) (*types.Payment, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "Psql.SavePayment")
+	defer span.Finish()
+	
 	query := `INSERT INTO payment (id, business_id, 
 		order_id, operation, amount, status, 
 		currency, card_number, card_expiry_month,
@@ -268,6 +298,9 @@ func (s *PostgresStorage) SavePayment(ctx context.Context, tx *sql.Tx, payment *
 }
 
 func (s *PostgresStorage) GetPaymentByID(ctx context.Context, id uuid.UUID) (*types.Payment, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "Psql.GetPaymentByID")
+	defer span.Finish()
+	
 	query := `SELECT * FROM payment WHERE id = $1`
 	pay := &types.Payment{}
 	if err := s.db.QueryRowContext(
@@ -286,6 +319,9 @@ func (s *PostgresStorage) GetPaymentByID(ctx context.Context, id uuid.UUID) (*ty
 }
 
 func (s *PostgresStorage) SaveBalance(ctx context.Context, tx *sql.Tx, account *types.Account, balance, bmoney uint64) (*types.Account, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "Psql.SaveBalance")
+	defer span.Finish()
+	
 	query := `UPDATE account
 				SET balance = COALESCE(NULLIF($1, 0), balance),
 					blocked_money = COALESCE(NULLIF($2, 0), blocked_money)

@@ -12,9 +12,10 @@ import (
 	"github.com/Edbeer/paymentapi/pkg/utils"
 	"github.com/Edbeer/paymentapi/types"
 	"github.com/alicebob/miniredis"
-	"github.com/redis/go-redis/v9"
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
+	"github.com/opentracing/opentracing-go"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 )
 
@@ -57,9 +58,12 @@ func Test_CreateAccount(t *testing.T) {
 	require.Nil(t, err)
 
 	request := httptest.NewRequest(http.MethodPost, "/account", buffer)
+	span, ctxWithTrace := opentracing.StartSpanFromContext(request.Context(), "Account.createAccount")
+	defer span.Finish()
+
 	recorder := httptest.NewRecorder()
 	reqAcc := types.NewAccount(req)
-	mockStorage.EXPECT().CreateAccount(request.Context(), gomock.Eq(req)).Return(&types.Account{
+	mockStorage.EXPECT().CreateAccount(ctxWithTrace, gomock.Eq(req)).Return(&types.Account{
 		ID:               reqAcc.ID,
 		FirstName:        "Pasha1",
 		LastName:         "volkov1",
@@ -77,7 +81,7 @@ func Test_CreateAccount(t *testing.T) {
 		UserID: reqAcc.ID,
 	}
 	token := "refresh-token"
-	mockRedis.EXPECT().CreateSession(request.Context(), gomock.Eq(sess), 86400).Return(token, nil)
+	mockRedis.EXPECT().CreateSession(ctxWithTrace, gomock.Eq(sess), 86400).Return(token, nil)
 
 	err = server.createAccount(recorder, request)
 	require.NoError(t, err)
@@ -119,6 +123,8 @@ func Test_SignIn(t *testing.T) {
 	require.Nil(t, err)
 
 	request := httptest.NewRequest(http.MethodPost, "/account/sign-in", buffer)
+	span, ctxWithTrace := opentracing.StartSpanFromContext(request.Context(), "Account.signIn")
+	defer span.Finish()
 	recorder := httptest.NewRecorder()
 
 	account := &types.Account{
@@ -135,12 +141,12 @@ func Test_SignIn(t *testing.T) {
 		CreatedAt:        time.Now(),
 	}
 
-	mockStorage.EXPECT().GetAccountByID(request.Context(), req.ID).Return(account, nil).AnyTimes()
+	mockStorage.EXPECT().GetAccountByID(ctxWithTrace, req.ID).Return(account, nil).AnyTimes()
 	sess := &types.Session{
 		UserID: req.ID,
 	}
 	token := "refresh-token"
-	mockRedis.EXPECT().CreateSession(request.Context(), gomock.Eq(sess), 86400).Return(token, nil)
+	mockRedis.EXPECT().CreateSession(ctxWithTrace, gomock.Eq(sess), 86400).Return(token, nil)
 
 	err = server.signIn(recorder, request)
 	require.NoError(t, err)
@@ -173,6 +179,8 @@ func Test_SignOut(t *testing.T) {
 	server := NewJSONApiServer(config, db, client, mockStorage, mockRedis)
 
 	request := httptest.NewRequest(http.MethodPost, "/account/sign-out", nil)
+	span, ctxWithTrace := opentracing.StartSpanFromContext(request.Context(), "Account.signOut")
+	defer span.Finish()
 	recorder := httptest.NewRecorder()
 
 	token := "refresh-token"
@@ -187,7 +195,7 @@ func Test_SignOut(t *testing.T) {
 	require.NotEqual(t, cookie.Value, "")
 	require.Equal(t, cookie.Value, cookieValue)
 
-	mockRedis.EXPECT().DeleteSession(request.Context(), gomock.Eq(cookie.Value)).Return(nil)
+	mockRedis.EXPECT().DeleteSession(ctxWithTrace, gomock.Eq(cookie.Value)).Return(nil)
 
 	err = server.signOut(recorder, request)
 	require.NoError(t, err)
@@ -228,9 +236,12 @@ func Test_RefreshTokens(t *testing.T) {
 	require.Nil(t, err)
 
 	request := httptest.NewRequest(http.MethodPost, "/account/refresh", buffer)
+	span, ctxWithTrace := opentracing.StartSpanFromContext(request.Context(), "Account.refreshTokens")
+	defer span.Finish()
+
 	recorder := httptest.NewRecorder()
 	uid := uuid.New()
-	mockRedis.EXPECT().GetUserID(request.Context(), req.RefreshToken).Return(uid, nil).AnyTimes()
+	mockRedis.EXPECT().GetUserID(ctxWithTrace, req.RefreshToken).Return(uid, nil).AnyTimes()
 
 	account := &types.Account{
 		ID:               uid,
@@ -246,13 +257,13 @@ func Test_RefreshTokens(t *testing.T) {
 		CreatedAt:        time.Now(),
 	}
 
-	mockStorage.EXPECT().GetAccountByID(request.Context(), uid).Return(account, nil).AnyTimes()
+	mockStorage.EXPECT().GetAccountByID(ctxWithTrace, uid).Return(account, nil).AnyTimes()
 
 	token := "refresh-token"
 	sess := &types.Session{
 		UserID: uid,
 	}
-	mockRedis.EXPECT().CreateSession(request.Context(), gomock.Eq(sess), 86400).Return(token, nil)
+	mockRedis.EXPECT().CreateSession(ctxWithTrace, gomock.Eq(sess), 86400).Return(token, nil)
 
 	request.AddCookie(&http.Cookie{Name: token, Value: req.RefreshToken})
 
@@ -282,6 +293,9 @@ func Test_GetAccount(t *testing.T) {
 	server := NewJSONApiServer(config, db, nil, mockStorage, nil)
 
 	request := httptest.NewRequest(http.MethodGet, "/account", nil)
+	span, ctxWithTrace := opentracing.StartSpanFromContext(request.Context(), "Account.getAccount")
+	defer span.Finish()
+
 	recorder := httptest.NewRecorder()
 
 	accounts := []*types.Account{
@@ -326,7 +340,7 @@ func Test_GetAccount(t *testing.T) {
 		},
 	}
 
-	mockStorage.EXPECT().GetAccount(request.Context()).Return(accounts, nil).AnyTimes()
+	mockStorage.EXPECT().GetAccount(ctxWithTrace).Return(accounts, nil).AnyTimes()
 
 	err = server.getAccount(recorder, request)
 	require.NoError(t, err)
@@ -348,6 +362,9 @@ func Test_GetAccountByID(t *testing.T) {
 	config := &config.Config{}
 	server := NewJSONApiServer(config, db, nil, mockStorage, nil)
 	request := httptest.NewRequest(http.MethodGet, "/accounе/{id}", nil)
+	span, ctxWithTrace := opentracing.StartSpanFromContext(request.Context(), "Account.getAccountByID")
+	defer span.Finish()
+
 	recorder := httptest.NewRecorder()
 	uid := uuid.New()
 
@@ -365,7 +382,7 @@ func Test_GetAccountByID(t *testing.T) {
 		CreatedAt:        time.Now(),
 	}
 
-	mockStorage.EXPECT().GetAccountByID(request.Context(), uid).Return(account, nil).AnyTimes()
+	mockStorage.EXPECT().GetAccountByID(ctxWithTrace, uid).Return(account, nil).AnyTimes()
 
 	err = server.getAccountByID(recorder, request)
 	require.NoError(t, err)
@@ -400,6 +417,9 @@ func Test_UpdateAccount(t *testing.T) {
 	require.NotNil(t, buffer)
 	require.Nil(t, err)
 	request := httptest.NewRequest(http.MethodPut, "/account/{id}", buffer)
+	span, ctxWithTrace := opentracing.StartSpanFromContext(request.Context(), "Account.updateAccount")
+	defer span.Finish()
+
 	recorder := httptest.NewRecorder()
 	uid := uuid.New()
 
@@ -417,7 +437,7 @@ func Test_UpdateAccount(t *testing.T) {
 		CreatedAt:        time.Now(),
 	}
 
-	mockStorage.EXPECT().UpdateAccount(request.Context(), reqUp, uid).Return(account, nil).AnyTimes()
+	mockStorage.EXPECT().UpdateAccount(ctxWithTrace, reqUp, uid).Return(account, nil).AnyTimes()
 	require.Equal(t, reqUp.FirstName, account.FirstName)
 	require.Equal(t, reqUp.LastName, account.LastName)
 	require.Equal(t, reqUp.CardNumber, account.CardNumber)
@@ -442,11 +462,14 @@ func Test_DeleteAccount(t *testing.T) {
 	server := NewJSONApiServer(config, db, nil, mockStorage, nil)
 
 	request := httptest.NewRequest(http.MethodDelete, "/account/{id}", nil)
+	span, ctxWithTrace := opentracing.StartSpanFromContext(request.Context(), "Account.deleteAccount")
+	defer span.Finish()
+
 	recorder := httptest.NewRecorder()
 
 	uid := uuid.New()
 
-	mockStorage.EXPECT().DeleteAccount(request.Context(), uid).Return(nil).AnyTimes()
+	mockStorage.EXPECT().DeleteAccount(ctxWithTrace, uid).Return(nil).AnyTimes()
 
 	err = server.deleteAccount(recorder, request)
 	require.NoError(t, err)
@@ -477,6 +500,9 @@ func Test_DepositAccount(t *testing.T) {
 	require.NotNil(t, buffer)
 	require.Nil(t, err)
 	request := httptest.NewRequest(http.MethodPost, "/account/deposit", buffer)
+	span, ctxWithTrace := opentracing.StartSpanFromContext(request.Context(), "Account.depositAccount")
+	defer span.Finish()
+
 	recorder := httptest.NewRecorder()
 	uid := uuid.New()
 	account := &types.Account{
@@ -505,15 +531,15 @@ func Test_DepositAccount(t *testing.T) {
 		Statement:        make([]string, 1),
 		CreatedAt:        time.Now(),
 	}
-	mockStorage.EXPECT().GetAccountByCard(request.Context(), reqDep.CardNumber).Return(account, nil).AnyTimes()
-	mockStorage.EXPECT().DepositAccount(request.Context(), reqDep).Return(account2, nil).AnyTimes()
+	mockStorage.EXPECT().GetAccountByCard(ctxWithTrace, reqDep.CardNumber).Return(account, nil).AnyTimes()
+	mockStorage.EXPECT().DepositAccount(ctxWithTrace, reqDep).Return(account2, nil).AnyTimes()
 
 	err = server.depositAccount(recorder, request)
 	require.NoError(t, err)
 	require.Nil(t, err)
 }
 
-func Test_GetStatemetn(t *testing.T) {
+func Test_GetStatement(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
@@ -527,6 +553,9 @@ func Test_GetStatemetn(t *testing.T) {
 	config := &config.Config{}
 	server := NewJSONApiServer(config, db, nil, mockStorage, nil)
 	request := httptest.NewRequest(http.MethodGet, "/accounе/statement/{id}", nil)
+	span, ctxWithTrace := opentracing.StartSpanFromContext(request.Context(), "Account.getStatement")
+	defer span.Finish()
+
 	recorder := httptest.NewRecorder()
 	uid := uuid.New()
 
@@ -544,7 +573,7 @@ func Test_GetStatemetn(t *testing.T) {
 		CreatedAt:        time.Now(),
 	}
 
-	mockStorage.EXPECT().GetAccountStatement(request.Context(), uid).Return(account.Statement, nil).AnyTimes()
+	mockStorage.EXPECT().GetAccountStatement(ctxWithTrace, uid).Return(account.Statement, nil).AnyTimes()
 
 	err = server.getAccountByID(recorder, request)
 	require.NoError(t, err)
